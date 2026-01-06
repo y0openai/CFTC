@@ -592,48 +592,79 @@ if page == "📊 차트 분석 (Analysis)":
                                 prompt_text = f"""
                                 [Role]
                                 You are a ruthless Head Strategist at a top Hedge Fund targeting the Korean market.
-                                You speak perfect, natural Korean (Hangul). Do NOT use Japanese or Chinese characters.
+                                You speak perfect, natural Korean (Hangul).
                                 
                                 [Input Data: Price vs **MY Short Contracts**]
                                 {chr(10).join(prompt_rows)}
                                 
                                 [CRITICAL RULE]
-                                - **Short OI (Contracts)** is **YOUR OWN POSITION**. 
-                                - When OI goes UP: **YOU** are selling more shorts (Betting on Drop or Hedging).
-                                - When OI goes DOWN: **YOU** are buying back (Closing shorts/Taking Profit).
-                                - **NEVER** interpret OI as "retail traders' hope". Retail traders are mostly Long. YOU are the Short Whale.
+                                - **Short OI** is **YOUR POSITION**. 
+                                - OI UP: You are betting on DROP.
+                                - OI DOWN: You are taking PROFIT.
                                 
                                 [Task]
-                                Create a "Secret Trading Journal" with a strong narrative flow (Left to Right).
+                                Analyze the data in 3 chronological phases and return a JSON object.
                                 
-                                [Design & Structure]
-                                1. **Header (The Flow):** Start with a BIG bold arrow flow chart.
-                                   - Example: `### 🌿 1. 매집 (Accumulation) ➡️ ⚡ 2. 공매도 급습 (Bear Raid) ➡️ 💰 3. 설거지 (Exit)`
-                                
-                                2. **Phase Analysis (The Details):**
-                                   - Divide volume into 3 Phases.
-                                   - For each phase, explain your manipulative tactic.
-                                   - **Logic:**
-                                     * MY Position ↑ + Price ↑ = "개미 꼬시기 (Farming)" -> "I increased my shorts while price rose to collect premium."
-                                     * MY Position ↑ + Price ↓ = "공포 조장 (Bear Raid)" -> "I dumped spot and increased shorts to crush the price."
-                                     * MY Position ↓ = "이익 실현 (Exit)" -> "I closed my shorts (bought back) to take profit."
-                                
-                                3. **Future Plan (The Next Move):**
-                                   - Based on the LAST data point, write a "Next 1-Month Secret Plan".
-                                   - "If price rebounds to $X, we short again." / "We are leaving this market."
-                                
-                                4. **CEO's Advice:** A cynical advice to retail investors.
-                                
+                                [Output JSON Structure]
+                                {{
+                                  "header": "One-line summary with arrows (e.g., Phase1 ➡️ Phase2 ➡️ Phase3)",
+                                  "phases": [
+                                    {{
+                                      "title": "Phase 1 Title (e.g., 🌿 The Trap)",
+                                      "period": "Start Date ~ End Date",
+                                      "narrative": "Storytelling about your manipulation. Why you did it. How you tricked ants."
+                                    }},
+                                    {{ "title": "Phase 2 Title", "period": "...", "narrative": "..." }},
+                                    {{ "title": "Phase 3 Title", "period": "...", "narrative": "..." }}
+                                  ],
+                                  "future_plan": "Next 1-Month Operation Plan (Scenario)",
+                                  "advice": "Cynical advice to retail investors (CEO's Closing Remark)"
+                                }}
+
                                 [Constraints]
-                                - **LANGUAGE: 100% KOREAN (Hangul ONLY). No Kanji, No Kana.**
-                                - Tone: Cynical, Intelligent, "The Big Short" style.
-                                - Use > Blockquotes for your inner thoughts.
+                                - **Return ONLY valid JSON.** No markdown formatting (```json) outside the object.
+                                - **LANGUAGE:** Korean (Hangul).
+                                - **Tone:** Cynical, Elite, 'The Big Short' style.
                                 """
                                 
                                 response = model.generate_content(prompt_text)
-                                st.markdown("---")
-                                st.markdown("### 🍷 헤지펀드 전략가의 회고록 (The Secret Journal)")
-                                st.markdown(response.text)
+                                
+                                # Parsing JSON
+                                import json
+                                try:
+                                    # Clean up if model adds markdown blocks
+                                    text_res = response.text.replace("```json", "").replace("```", "").strip()
+                                    data = json.loads(text_res)
+                                    
+                                    st.markdown("---")
+                                    st.markdown(f"### 🍷 헤지펀드 전략가의 회고록")
+                                    st.subheader(data.get("header", "Strategy Flow"))
+                                    
+                                    # 3-Column Layout for Horizontal Flow
+                                    cols = st.columns(3)
+                                    phases = data.get("phases", [])
+                                    
+                                    for i, col in enumerate(cols):
+                                        if i < len(phases):
+                                            p = phases[i]
+                                            with col:
+                                                st.info(f"**{p['title']}**")
+                                                st.caption(f"🗓️ {p['period']}")
+                                                st.markdown(f"{p['narrative']}")
+                                    
+                                    st.markdown("---")
+                                    f_col1, f_col2 = st.columns(2)
+                                    with f_col1:
+                                        st.markdown("#### 🚀 향후 1개월 비밀 작전")
+                                        st.success(data.get("future_plan", "No Plan."))
+                                    with f_col2:
+                                        st.markdown("#### 💀 개미들에게 고함")
+                                        st.warning(data.get("advice", "No Advice."))
+                                        
+                                except Exception as json_e:
+                                    # Fallback if JSON fails
+                                    st.warning("⚠️ 데이터 파싱 중 오류가 발생하여 원본 텍스트를 출력합니다.")
+                                    st.markdown(response.text)
                                 st.success("이것이 월스트리트의 방식입니다.")
                                 
                             except Exception as e:
