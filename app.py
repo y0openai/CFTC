@@ -974,21 +974,59 @@ if page == "📊 차트 분석 (Analysis)":
             st.write("---")
             st.info("💡 자세한 해설과 교육 자료가 필요하시면 좌측 메뉴의 **[🎓 초보자 가이드]**를 클릭하세요.")
             
-            # --- BACKTEST REPORT ---
+            # --- BACKTEST REPORT (DYNAMIC) ---
             st.write("---")
             st.markdown("#### 🧪 Backtest Report (2024.01 ~ Present)")
-            st.caption("각 신호별로 가장 유의미한 기간(1주/4주)을 기준으로 검증한 승률입니다.")
             
-            b_col1, b_col2, b_col3 = st.columns(3)
-            b_col1.metric("Squeeze (1W Drop)", "64%", "High Precision Sell") # 1W Accuracy
-            b_col2.metric("Bear Raid (1W Rebound)", "67%", "Contrarian Buy") # 1W Rebound
-            b_col3.metric("Overall (4W Trend)", "56%", "Mid-term Accuracy") # Overall 4W
+            from backtest_simulation import run_backtest_simulation
+            import datetime
+
+            try:
+                # 1. Define Simulation Period
+                sim_start_date = datetime.date(2024, 1, 1)
+                sim_end_date = datetime.date.today()
+                
+                # Check data availability
+                min_date = combined['Date'].min().date()
+                if min_date > sim_start_date:
+                    sim_start_date = min_date
+
+                # 2. Run Simulation
+                st.spinner(f"Running simulation for {selected_asset_name}...")
+                report, yearly_df = run_backtest_simulation(combined, sim_start_date, sim_end_date)
+                
+                st.caption(f"**{selected_asset_name} ({sim_start_date} ~ {sim_end_date})** 실전 검증 결과")
+
+                # 3. Display Metrics
+                c1, c2, c3 = st.columns(3)
+                
+                # Squeeze Precision (1W Drop)
+                sq_acc = report.get('squeeze_accuracy', 0) * 100
+                c1.metric("Squeeze (1W Drop)", f"{sq_acc:.1f}%", "High Precision Sell")
+                
+                # Bear Raid Precision (1W Rebound)
+                br_acc = report.get('bear_raid_accuracy', 0) * 100
+                c2.metric("Bear Raid (1W Rebound)", f"{br_acc:.1f}%", "Contrarian Buy")
+                
+                # Overall Accuracy (4W Trend)
+                acc = report.get('accuracy', 0) * 100
+                c3.metric("Overall (4W Trend)", f"{acc:.1f}%", "Mid-term Accuracy")
+
+                # 4. Insight & Logs
+                st.info(f"""
+                💡 **전략적 통찰 ({selected_asset_name}):** 
+                * **Squeeze 감지 시:** **{sq_acc:.1f}% 확률로 1주 내 하락**했습니다.
+                * **Bear Raid 감지 시:** **{br_acc:.1f}% 확률로 1주 내 기술적 반등**이 나옵니다.
+                """)
+                
+                with st.expander("🔎 상세 검증 로그 보기 (Detailed Logs)"):
+                    st.dataframe(yearly_df[['Date', 'Close', 'Signal', 'Result_4W', 'Actual_Return_4W']].style.format({
+                        "Close": "{:.2f}", 
+                        "Actual_Return_4W": "{:.2%}"
+                    }))
             
-            st.info("""
-            💡 **전략적 통찰:** 
-            * **Squeeze 감지 시:** **64% 확률로 1주 내 하락**했습니다. 즉각적인 매도/숏 진입이 유리합니다.
-            * **Bear Raid 감지 시:** **67% 확률로 1주 내 기술적 반등**이 나옵니다. 공포에 팔지 말고 **반등 시 탈출**하십시오.
-            """)
+            except Exception as e:
+                st.error(f"Backtest Error: {e}")
 
 # ==========================================
 # PAGE 2: EDUCATIONAL GUIDE
