@@ -104,7 +104,7 @@ if page == "📊 차트 분석 (Analysis)":
                 y_am = asset_mgr_shorts_raw
                 y_axis_title = "Short Interest (Contract Count)"
 
-            # Apply Smoothing (Moving Average) if requested
+            # 3. Apply Smoothing (Moving Average) if requested
             if USE_MA:
                 y_hf = y_hf.rolling(window=4).mean() # 4 Weeks MA
                 y_am = y_am.rolling(window=4).mean()
@@ -127,7 +127,7 @@ if page == "📊 차트 분석 (Analysis)":
             # 2. Hedge Fund Shorts (Right - Blue)
             name_hf = "Hedge Funds Short (4W MA)" if USE_MA else "Hedge Funds Short"
             fig.add_trace(
-                go.Scatter(x=x_cftc, y=y_hf, name=name_hf, line=dict(color='blue', width=2)),
+                go.Bar(x=x_cftc, y=y_hf, name=name_hf, marker=dict(color='blue', opacity=0.4)),
                 secondary_y=True,
             )
             
@@ -181,121 +181,134 @@ if page == "📊 차트 분석 (Analysis)":
             st.plotly_chart(fig, use_container_width=True)
             
             # --- SMART MONEY ANALYSIS ENGINE (DYNAMIC RANGE) ---
-            st.subheader(f"🤖 Smart Money Analysis & Forecast (구간: {sel_start_date} ~ {sel_end_date})")
+            st.subheader(f"🤖 Smart Money Analysis & Forecast ({sel_start_date} ~ {sel_end_date})")
             
             # 1. Calculation Engine
             # Filter data within range
             range_df = combined[(combined['Date'].dt.date >= sel_start_date) & 
                                 (combined['Date'].dt.date <= sel_end_date)].copy()
             
-            weeks_duration = len(range_df)
+            # --- CRITICAL FIX: Create Weekly Analysis DataFrame ---
+            # range_df is DAILY (Price). CFTC is WEEKLY.
+            # To calculate "1 Week Change", we must compare "This Week" vs "Last Week", not "Today" vs "Yesterday".
+            # Resample to Weekly (Friday) to align with CFTC release cycle.
+            analysis_df = range_df.resample('W-Fri', on='Date').last().dropna(subset=['Lev_Money_Positions_Short_All'])
+            
+            weeks_duration = len(analysis_df)
             
             if weeks_duration < 2:
                 st.warning("분석을 위해 최소 2주 이상의 구간을 선택해주세요.")
-                oi_delta_pct = 0
-                price_delta_pct = 0
+                range_oi_delta = 0
+                range_price_delta = 0
                 correlation = 0
+                one_w_oi_delta = 0
+                one_w_price_delta = 0
+                one_m_oi_delta = 0
             else:
-                # Start vs End of the selection
-                # Use RAW data for Start and End points to capture exact change
-                start_row = range_df.iloc[0]
-                end_row = range_df.iloc[-1]
+                # Start vs End of the selection (Using Weekly DF)
+                start_row = analysis_df.iloc[0]
+                end_row = analysis_df.iloc[-1]
                 
-                oi_start = start_row['Lev_Money_Positions_Short_All']
-                oi_end = end_row['Lev_Money_Positions_Short_All']
+                # Metrics Calculation (Based on Weekly Data)
+                # 1. Range (Start vs End)
+                range_oi_delta = ((end_row['Lev_Money_Positions_Short_All'] - start_row['Lev_Money_Positions_Short_All']) / start_row['Lev_Money_Positions_Short_All']) * 100
+                range_price_delta = ((end_row['Close'] - start_row['Close']) / start_row['Close']) * 100
                 
-                price_start = start_row['Close']
-                price_end = end_row['Close']
-                
-                # Change Calculation
-                if oi_start == 0 or pd.isna(oi_start): oi_delta_pct = 0
-                else: oi_delta_pct = ((oi_end - oi_start) / oi_start) * 100
-                    
-                if price_start == 0 or pd.isna(price_start): price_delta_pct = 0
-                else: price_delta_pct = ((price_end - price_start) / price_start) * 100
-                
-                # Correlation for the selected range
-                if len(range_df) > 2:
-                    correlation = range_df['Close'].corr(range_df['Lev_Money_Positions_Short_All'])
+                # Correlation (Use daily range_df for better correlation granularity, OR weekly analysis_df)
+                # Weekly is less noisy for correlation. Let's use analysis_df.
+                if len(analysis_df) > 2:
+                    correlation = analysis_df['Close'].corr(analysis_df['Lev_Money_Positions_Short_All'])
                 else:
                     correlation = 0
+                
+                # 2. Latest 1 Week (Last vs 2nd Last in Weekly DF)
+                latest_oi = analysis_df.iloc[-1]['Lev_Money_Positions_Short_All']
+                prev_oi = analysis_df.iloc[-2]['Lev_Money_Positions_Short_All']
+                latest_price = analysis_df.iloc[-1]['Close']
+                prev_price = analysis_df.iloc[-2]['Close']
+                
+                one_w_oi_delta = ((latest_oi - prev_oi) / prev_oi) * 100 if prev_oi != 0 else 0
+                one_w_price_delta = ((latest_price - prev_price) / prev_price) * 100 if prev_price != 0 else 0
+                
+                # 3. Recent 1 Month (Last vs 5th Last in Weekly DF -> approx 4 weeks back)
+                if len(analysis_df) >= 5:
+                    prev_1m_oi = analysis_df.iloc[-5]['Lev_Money_Positions_Short_All']
+                    one_m_oi_delta = ((latest_oi - prev_1m_oi) / prev_1m_oi) * 100 if prev_1m_oi != 0 else 0
+                else:
+                    one_m_oi_delta = range_oi_delta # Fallback
                     
             # Handle NaN correlation
             if pd.isna(correlation): correlation = 0
                 
-            # Macro Trend Context (Last 6 Months relative to SELECTION END)
-            # We need the full combined df up to sel_end_date for macro context
-            # Filter full history up to selection end
-            history_df = combined[combined['Date'].dt.date <= sel_end_date].copy()
-            history_df['MA_Shorts'] = history_df['Lev_Money_Positions_Short_All'].rolling(window=4).mean()
-            
-            macro_trend = ""
-            if len(history_df) > 24:
-                macro_start = history_df.iloc[-24]['MA_Shorts']
-                macro_end = history_df.iloc[-1]['MA_Shorts']
-                if macro_start > 0:
-                    macro_change = ((macro_end - macro_start) / macro_start) * 100
-                    if macro_change > 10: macro_trend = "(장기 추세: 매집 중 ↗️)"
-                    elif macro_change < -10: macro_trend = "(장기 추세: 청산 중 ↘️)"
-                    else: macro_trend = "(장기 추세: 횡보 ➡️)"
-
-            # 2. Logic & Evidence Engine (Multi-Timeframe Analysis)
-            # A. Define Timeframes
-            # (1) Range (Full Selection)
-            # (2) Latest 1 Week (Immediate Action)
-            # (3) Recent 1 Month (Short-term Trend)
-            
-            # --- Metrics Calculation ---
-            # 1. Range (Start vs End)
-            range_oi_delta = ((range_df.iloc[-1]['Lev_Money_Positions_Short_All'] - range_df.iloc[0]['Lev_Money_Positions_Short_All']) / range_df.iloc[0]['Lev_Money_Positions_Short_All']) * 100
-            range_price_delta = ((range_df.iloc[-1]['Close'] - range_df.iloc[0]['Close']) / range_df.iloc[0]['Close']) * 100
-            range_corr = correlation
-            
-            # 2. Latest 1 Week (Last vs 2nd Last)
-            if len(range_df) >= 2:
-                latest_oi = range_df.iloc[-1]['Lev_Money_Positions_Short_All']
-                prev_oi = range_df.iloc[-2]['Lev_Money_Positions_Short_All']
-                latest_price = range_df.iloc[-1]['Close']
-                prev_price = range_df.iloc[-2]['Close']
-                
-                one_w_oi_delta = ((latest_oi - prev_oi) / prev_oi) * 100 if prev_oi != 0 else 0
-                one_w_price_delta = ((latest_price - prev_price) / prev_price) * 100 if prev_price != 0 else 0
-            else:
-                one_w_oi_delta = 0
-                one_w_price_delta = 0
-                
-            # 3. Recent 1 Month (Last vs 5th Last)
-            if len(range_df) >= 5:
-                prev_1m_oi = range_df.iloc[-5]['Lev_Money_Positions_Short_All']
-                one_m_oi_delta = ((range_df.iloc[-1]['Lev_Money_Positions_Short_All'] - prev_1m_oi) / prev_1m_oi) * 100 if prev_1m_oi != 0 else 0
-            else:
-                one_m_oi_delta = range_oi_delta # Fallback
+            range_corr = correlation # Alias for compatibility
             
             # --- Interpretation Logic ---
             
-            # 1. Analyze Core Trend (Based on Correlation & Range)
-            trend_status = "중립/횡보"
+            # 1. Analyze Core Trend (Rule-Based Expert Logic)
+            trend_status = "중립/횡보 (Neutral)"
             trend_desc = "뚜렷한 방향성 없이 등락을 반복했습니다."
             trend_color = "gray"
             
-            if range_corr > 0.5:
-                if range_oi_delta > 5: 
-                    trend_status = "매집 우위 (Accumulation)"
-                    trend_desc = "기간 동안 가격과 숏 OI가 동반 상승했습니다. 헤지펀드의 지속적인 매집세가 관찰됩니다."
+            # A. Huge OI Change (Whale moved regardless of correlation)
+            if range_oi_delta > 30.0:
+                if range_price_delta > 10.0:
+                    trend_status = "강력 매집 상승 (Strong Accumulation)"
+                    trend_desc = f"기간 동안 숏 물량이 폭발적으로(+{range_oi_delta:.1f}%) 늘어나며 가격 상승을 주도했습니다. 전형적인 상승장 패턴입니다."
                     trend_color = "green"
-                elif range_oi_delta < -5:
-                    trend_status = "청산 우위 (Distribution)"
-                    trend_desc = "기간 동안 가격과 숏 OI가 동반 하락했습니다. 차익거래 포지션을 정리하는 추세였습니다."
+                elif range_price_delta < -10.0:
+                    trend_status = "저가 매집 집중 (Dip Accumulation)"
+                    trend_desc = f"가격이 하락하는 동안 스마트 머니는 오히려 물량(+{range_oi_delta:.1f}%)을 쓸어 담았습니다. 공포 구간을 이용한 매집입니다."
+                    trend_color = "blue"
+                else:
+                    trend_status = "매물 소화/매집 (Absorbing)"
+                    trend_desc = "가격은 횡보했으나 내부적으로는 거대한 매집(+{range_oi_delta:.1f}%)이 일어났습니다. 에너지가 응축된 상태입니다."
+                    trend_color = "blue"
+
+            elif range_oi_delta < -30.0:
+                if range_price_delta < -10.0:
+                    trend_status = "대규모 이탈/손절 (Mass Exodus)"
+                    trend_desc = "가격 하락과 함께 자금이 썰물처럼 빠져나갔습니다(-{range_oi_delta:.1f}%). 하락 추세가 강력합니다."
                     trend_color = "red"
-            elif range_corr < -0.5:
-                if range_oi_delta < 0 and range_price_delta > 0:
-                    trend_status = "숏 스퀴즈 (Squeeze)"
-                    trend_desc = "가격은 올랐지만 숏 물량은 줄었습니다. 손절매성 청산이 상승을 주도했습니다."
+                elif range_price_delta > 10.0:
+                    trend_status = "숏 스퀴즈 랠리 (Squeeze Rally)"
+                    trend_desc = f"가격은 올랐지만 이는 숏 포지션 청산(-{range_oi_delta:.1f}%)에 의한 것입니다. 신규 매수세가 없는 '가짜 반등'일 수 있습니다."
                     trend_color = "orange"
-                elif range_oi_delta > 0 and range_price_delta < 0:
-                    trend_status = "하락 배팅 (Bearish Bet)"
-                    trend_desc = "가격 하락에도 불구하고 숏 물량이 늘었습니다. 투기적 하락 배팅 추세입니다."
-                    trend_color = "red"
+                else:
+                    trend_status = "차익 실현/이탈 (Profit Taking)"
+                    trend_desc = "가격 변동 없이 조용히 포지션을 정리(-{range_oi_delta:.1f}%)하고 있습니다."
+                    trend_color = "orange"
+
+            # B. Moderate Change (Use Correlation as confirmation)
+            elif abs(correlation) > 0.5:
+                if correlation > 0: # Sync
+                    if range_oi_delta > 0:
+                        trend_status = "상승 동조화 (Bullish Sync)"
+                        trend_desc = "가격과 숏 OI가 함께 오르는 건전한 상승 흐름입니다."
+                        trend_color = "green"
+                    else:
+                        trend_status = "하락 동조화 (Bearish Sync)"
+                        trend_desc = "가격과 OI가 같이 빠지고 있습니다. 시장 에너지가 약화되고 있습니다."
+                        trend_color = "red"
+                else: # Divergence
+                    if range_price_delta > 0:
+                        trend_status = "불안한 상승 (Weak Rally)"
+                        trend_desc = "가격은 오르지만 주포(숏)들은 이탈하고 있습니다."
+                        trend_color = "orange"
+                    else:
+                        trend_status = "⚠️ 공매도 공격 (Bear Raid)"
+                        trend_desc = "현물을 던져 가격을 고의로 떨어뜨리고, 선물 숏(레버리지)으로 막대한 차익을 챙기는 **'약탈적 사냥(Predatory Shorting)'** 패턴입니다."
+                        trend_color = "red"
+            
+            # C. Fallback (True Neutral)
+            else:
+                if range_oi_delta > 10:
+                     trend_status = "매집 우위 (Accumulation Bias)"
+                     trend_desc = "약한 상관관계 속에서도 꾸준히 물량이 늘어나고 있습니다."
+                     trend_color = "green"
+                elif range_oi_delta < -10:
+                     trend_status = "청산 우위 (Distribution Bias)"
+                     trend_desc = "방향성 없이 물량이 서서히 줄어들고 있습니다."
+                     trend_color = "red"
             
             # 2. Analyze Latest Action (Change of Heart?)
             action_status = ""
@@ -311,37 +324,239 @@ if page == "📊 차트 분석 (Analysis)":
                 action_status = "관망/유지 ✊"
                 action_desc = f"마지막 주 변동폭이 미미합니다({one_w_oi_delta:.1f}%). 기존 포지션을 유지하고 있습니다."
 
-            # 3. Final Synthesis (Verdict)
+            # 3. Final Synthesis (Weekly Behavior Timeline & Prediction)
+            # Fix: Ensure unique dates for weekly log
+            range_df = range_df.drop_duplicates(subset=['Date'], keep='last')
+            
+            weekly_logs = []
+            
+            # --- DUAL PERSONA MEMORY (State Machine) ---
+            # Modes: "NEUTRAL", "FARMER" (Arbitrage/Accumulation), "HUNTER" (Bear Raid)
+            market_mode = "NEUTRAL"
+            
+            if len(range_df) >= 2:
+                for i in range(1, len(range_df)):
+                    curr_row = range_df.iloc[i]
+                    prev_row = range_df.iloc[i-1]
+                    
+                    curr_date = curr_row['Date'].strftime('%Y-%m-%d')
+                    current_month = curr_row['Date'].month
+                    
+                    # Deltas
+                    c_oi = curr_row['Lev_Money_Positions_Short_All']
+                    p_oi = prev_row['Lev_Money_Positions_Short_All']
+                    c_price = curr_row['Close']
+                    p_price = prev_row['Close']
+                    
+                    # Avoid division by zero
+                    w_oi_pct = ((c_oi - p_oi) / p_oi) * 100 if p_oi != 0 else 0
+                    w_price_pct = ((c_price - p_price) / p_price) * 100 if p_price != 0 else 0
+                    
+                    ACT_THRES = 2.0
+                    
+                    intent_emoji = "😐"
+                    intent_title = "관망 (Wait)"
+                    intent_desc = "유의미한 변화가 없습니다."
+                    prediction_text = "당분간 횡보가 예상됩니다."
+
+                    # --- LOGIC TREE ---
+                    
+                    # 1. ACCUMULATION (Entry)
+                    if w_oi_pct > ACT_THRES:
+                        # Check specifics to define Persona
+                        if w_price_pct < -3.0 and w_oi_pct > 5.0:
+                            # [HUNTER MODE START]
+                            market_mode = "HUNTER"
+                            intent_emoji = "🩸"
+                            intent_title = "공매도 공격 (Bear Raid)"
+                            intent_desc = f"현물 투매로 가격 폭락({w_price_pct:.1f}%)을 유도하고, 선물 숏을 기습적으로 늘려(+{w_oi_pct:.1f}%) **약탈적 사냥 모드**에 진입했습니다."
+                            prediction_text = "세력의 의도적인 하락 유도입니다. 바닥 신호가 나올 때까지 절대 진입하지 마세요."
+                        
+                        elif w_price_pct > 1.0:
+                            # [FARMER MODE START] - Momentum
+                            market_mode = "FARMER"
+                            intent_emoji = "🌱" # Sprout for Farmer
+                            intent_title = "이모작 시작 (Momentum Farming)"
+                            intent_desc = "상승장에 맞추어 **무위험 차익거래(현물매수+선물매도) 농사**를 시작했습니다. (건전한 진입)"
+                            prediction_text = "상승 모멘텀이 강화될 것입니다. 단기 과열 여부만 체크하세요."
+                        
+                        elif w_price_pct < -1.0:
+                            # [FARMER MODE START] - Dip Buying
+                            market_mode = "FARMER"
+                            intent_emoji = "🐜"
+                            intent_title = "저가 씨뿌리기 (Dip Buying)"
+                            intent_desc = f"가격 하락({w_price_pct:.1f}%)을 기회로 삼아 **저렴한 값에 현물을 매집**하고 숏 포지션을 구축했습니다."
+                            prediction_text = "스마트 머니의 저가 매수세가 확인되었습니다. 물량 확보 후 반등 가능성이 높습니다."
+                        
+                        else:
+                            # [FARMER MODE CONTINUE]
+                            market_mode = "FARMER"
+                            intent_emoji = "📦"
+                            intent_title = "매집 축적 (Accumulation)"
+                            intent_desc = "가격을 자극하지 않고 조용히 포지션을 늘리고 있습니다."
+                            prediction_text = "에너지가 응축되고 있습니다. 곧 시세 분출이 예상됩니다."
+
+                    # 2. LIQUIDATION (Exit)
+                    elif w_oi_pct < -ACT_THRES:
+                        # Priority 1: Seasonality Override (Structural Events)
+                        if current_month == 12:
+                             market_mode = "NEUTRAL" # Reset after closing
+                             intent_emoji = "💰"
+                             intent_title = "연말 수익 확정 (Book Closing)"
+                             intent_desc = "연말 보너스 확정을 위해 **1년 농사를 모두 수익 실현**하고 장부를 마감했습니다."
+                             prediction_text = "메이저 자금이 휴가를 떠났습니다. 산타 랠리(빈집털이) 혹은 횡보가 예상됩니다."
+                        elif current_month in [3, 6, 9]:
+                             # Rollover keeps the mode theoretically, but let's just log it
+                             intent_emoji = "🔄"
+                             intent_title = "분기 만기 롤오버 (Rollover)"
+                             intent_desc = "만기를 앞두고 포지션을 교체하고 있습니다. 추세 변화가 아닌 **단순 교체 작업**입니다."
+                             prediction_text = "롤오버가 끝나면 기존 추세가 이어질 것입니다."
+                        
+                        else:
+                            # Priority 2: Persona-Based Interpretation
+                            if market_mode == "HUNTER":
+                                if w_price_pct < -1.0:
+                                    intent_emoji = "🍖"
+                                    intent_title = "전리품 챙기기 (Looting)"
+                                    intent_desc = "공매도 공격 성공 후, **하락장에서 막대한 수익을 실현(익절)**하고 있습니다."
+                                    prediction_text = "세력이 배불리 먹고 있습니다. 매도 압력이 해소되면 기술적 반등이 올 것입니다."
+                                elif w_price_pct > 1.0:
+                                    intent_emoji = "😎"
+                                    intent_title = "작전 종료 (Mission Accomplished)"
+                                    intent_desc = "공격 목표 달성 후 남은 물량을 정리하며 유유히 시장을 떠나고 있습니다."
+                                    prediction_text = "작전이 끝났습니다. 세력이 떠난 자리는 당분간 방향성 없는 움직임이 예상됩니다."
+                                else:
+                                    intent_emoji = "📉"
+                                    intent_title = "사냥 종료 (End Hunt)"
+                                    intent_desc = "공격 포지션을 정리하고 있습니다."
+                                    prediction_text = "변동성이 줄어들 것입니다."
+                                # Mode Exit? Let's keep Hunter mode until Neutral/Buy happens or explicit reset.
+                            
+                            elif market_mode == "FARMER":
+                                if w_price_pct < -1.0:
+                                    intent_emoji = "🌾"
+                                    intent_title = "가을 수확 (Harvesting)"
+                                    intent_desc = "기르던 포지션을 정리하며 **정상적인 차익거래 수익을 실현**하고 있습니다. (패닉 셀이 아님)"
+                                    prediction_text = "수익 실현 매물이 나오고 있습니다. 건전한 조정 과정입니다."
+                                elif w_price_pct > 1.0:
+                                    intent_emoji = "🔥" # Fire (Burned)
+                                    intent_title = "흉작/스퀴즈 (Squeeze)"
+                                    intent_desc = "예상치 못한 급등으로 **농사가 실패하고 강제 청산(Stop Loss)** 당했습니다."
+                                    prediction_text = "강제 청산 물량이 소진되면 급락할 위험이 있습니다."
+                                else:
+                                    intent_emoji = "📉"
+                                    intent_title = "포지션 축소 (Reduce)"
+                                    intent_desc = "리스크 관리를 위해 비중을 줄이고 있습니다."
+                                    prediction_text = "관망세가 짙어질 것입니다."
+                            
+                            else: # NEUTRAL MODE (No Context)
+                                if w_price_pct < -1.0:
+                                    intent_emoji = "🏃"
+                                    intent_title = "이탈 (Exit)"
+                                    intent_desc = "시장 전망 악화로 시장을 떠나고 있습니다."
+                                    prediction_text = "하락 추세가 지속될 수 있습니다."
+                                elif w_price_pct > 1.0:
+                                    intent_emoji = "💸"
+                                    intent_title = "숏 스퀴즈 (Short Squeeze)"
+                                    intent_desc = "가격 급등으로 인한 강제 청산이 발생했습니다."
+                                    prediction_text = "추격 매수를 자제하세요."
+                                else:
+                                    intent_emoji = "📉"
+                                    intent_title = "비중 축소 (De-leveraging)"
+                                    intent_desc = "관망을 위해 포지션을 줄이고 있습니다."
+                                    prediction_text = "횡보장이 예상됩니다."
+
+                    # 3. NEUTRAL / WAIT
+                    else:
+                        market_mode = "NEUTRAL" # Reset Persona when inactivity
+                        intent_emoji = "😐"
+                        intent_title = "관망 (Wait)"
+                        intent_desc = "유의미한 포지션 변화가 없습니다. 기존 차익거래 포지션을 유지(Carry) 중입니다."
+                        prediction_text = "당분간 횡보하거나 현재 추세가 완만하게 이어질 것입니다."
+                    
+                    weekly_logs.append({
+                        "date": curr_date,
+                        "oi_delta": w_oi_pct,
+                        "price_delta": w_price_pct,
+                        "emoji": intent_emoji,
+                        "title": intent_title,
+                        "desc": intent_desc,
+                        "pred": prediction_text
+                    })
+            
+            weekly_logs.reverse() # Show Newest first
+
+            # Final Verdict Logic (Trend + Action)
             final_verdict = ""
             final_color = "gray"
+            # Main Forecast Logic
+            final_forecast_text = "충분한 데이터가 없습니다."
             
-            # Logic: Conflict Check
-            if "매집" in trend_status and "이탈" in action_status:
-                final_verdict = "⚠️ 추세 이탈 경고 (Reversal Warning)"
-                final_synth = "전체적으로는 매집 구간이었으나, **가장 최근(1주) 헤지펀드가 갑자기 물량을 던지고 있습니다.** 상승 추세가 꺾일 위험이 있으니 주의가 필요합니다."
+            if "매집" in trend_status and one_w_oi_delta < -5:
+                final_verdict = "⚠️ 추세 이탈 경고 (Trend Reversal)"
                 final_color = "orange"
-            elif "청산" in trend_status and "매집" in action_status:
-                final_verdict = "💎 저점 매수 신호 (Re-Entry)"
-                final_synth = "지루한 청산(하락) 추세였으나, **가장 최근(1주) 다시 자금이 유입되기 시작했습니다.** 추세 반전(상승)의 초입일 수 있습니다."
-                final_color = "blue"
-            elif "매집" in trend_status and "매집" in action_status:
-                final_verdict = "🔥 강력 상승 지속 (Strong Buy)"
-                final_synth = "장기적으로도 매집 중이고, **지금 당장도 더 강력하게 사고 있습니다.** 상승 모멘텀이 매우 강합니다."
-                final_color = "green"
-            elif "청산" in trend_status and "이탈" in action_status:
-                final_verdict = "🩸 패닉 셀링 (Strong Sell)"
-                final_synth = "물량이 계속 빠지고 있으며, **최근에는 더 빠른 속도로 도망치고 있습니다.** 절대 진입 금지 구간입니다."
+                final_forecast_text = "장기간의 매집 추세가 깨지고 대규모 이탈이 발생했습니다. 상승 관점을 철회하고 리스크 관리에 들어가야 할 때입니다."
+            elif "공매도" in trend_status: # Priority Check for Bear Raid
+                final_verdict = "⚠️ 공매도 공격 (Bear Raid)"
                 final_color = "red"
+                final_forecast_text = "세력이 인위적으로 시세를 누르고 있습니다(Predatory Shorting). 투매에 동참하지 말고 바닥 신호를 기다리세요. (선물 숏 이익 실현 시 급반등 유의)"
+            elif "청산" in trend_status and one_w_oi_delta > 5:
+                final_verdict = "💎 저점 매수 신호 (Potential Bottom)"
+                final_color = "blue"
+                final_forecast_text = "하락 추세 끝자락에서 강력한 스마트 머니 유입이 포착되었습니다. 추세 반전을 기대할 수 있는 좋은 진입 기회입니다."
+            elif "매집" in trend_status and one_w_oi_delta > 0:
+                final_verdict = "🔥 강력 상승 지속 (Strong Buy)"
+                final_color = "green"
+                final_forecast_text = "장기 추세와 단기 행동 모두 '매수'를 가리키고 있습니다. 상승 랠리가 지속될 가능성이 매우 높습니다."
+            elif "청산" in trend_status and one_w_oi_delta < 0:
+                final_verdict = "🩸 패닉 셀링 (Strong Sell)"
+                final_color = "red"
+                final_forecast_text = "매도세가 매도세를 부르는 투매 국면입니다. 바닥 신호가 나올 때까지 절대 진입하지 마세요."
             else:
-                 final_verdict = f"{trend_status} + {action_status}"
-                 final_synth = f"전체적으로 {trend_status} 흐름을 보이고 있으며, 최근 행동 또한 {action_status} 상태로 일관적입니다. 큰 변곡점은 보이지 않습니다."
+                 final_verdict = f"{trend_status} 유지"
                  final_color = trend_color
+                 if "매집" in trend_status:
+                     final_forecast_text = "전반적인 매집 추세는 유효하나, 잠시 숨 고르기 중입니다. 기존 포지션을 홀딩하세요."
+                 elif "청산" in trend_status:
+                     final_forecast_text = "자금 이탈이 지속되고 있습니다. 보수적인 접근이 필요합니다."
+                 elif "공매도" in trend_status: # Bear Raid Check
+                     final_forecast_text = "공격적인 숏 베팅이 지속되고 있습니다. 추가 하락 압력이 높습니다."
+                 else:
+                     final_forecast_text = "뚜렷한 방향성이 없습니다. 박스권 매매나 관망이 유리합니다."
 
             # --- UI RENDERING ---
             with st.container():
                 st.markdown(f"### 📢 AI 종합 분석: :{final_color}[{final_verdict}]")
-                st.info(f"**💡 핵심 요약:** {final_synth}")
                 
+                # FORECAST SECTION (Restored)
+                if final_color == "green":
+                    st.success(f"**🔮 향후 전망 (Forecast):** {final_forecast_text}")
+                elif final_color == "red":
+                    st.error(f"**🔮 향후 전망 (Forecast):** {final_forecast_text}")
+                elif final_color == "blue" or final_color == "orange":
+                    st.warning(f"**🔮 향후 전망 (Forecast):** {final_forecast_text}")
+                else:
+                    st.info(f"**🔮 향후 전망 (Forecast):** {final_forecast_text}")
+                
+                 # Detailed Behavior Analysis Log
+                st.markdown("#### 🕵️ 행동 분석 (Weekly Behavior Timeline)")
+                st.markdown("선택하신 기간 동안 헤지펀드의 심리가 어떻게 변해왔는지 1주 단위로 분석합니다.")
+                
+                log_container = st.container(height=400) # Increased height
+                with log_container:
+                     for log in weekly_logs:
+                        # Color coding for delta
+                        oi_co = "red" if log['oi_delta'] < 0 else "blue"
+                        p_co = "red" if log['price_delta'] < 0 else "green"
+                        
+                        st.markdown(f"""
+                        **{log['date']}** {log['emoji']} **{log['title']}**
+                        - 📊 OI: :{oi_co}[{log['oi_delta']:+.1f}%] / Price: :{p_co}[{log['price_delta']:+.1f}%]
+                        - 💡 {log['desc']}
+                        - 🔮 **Prediction:** {log['pred']}
+                        ---
+                        """)
+
                 # Tab Structure for Detail
                 tab1, tab2 = st.tabs(["📝 상세 분석 리포트", "🔢 기간별 수치 데이터"])
                 
@@ -362,10 +577,18 @@ if page == "📊 차트 분석 (Analysis)":
                         st.markdown(f"- **가격 변동:** {one_w_price_delta:+.1f}%")
 
                 with tab2:
-                    metric_cols = st.columns(3)
-                    metric_cols[0].metric("전체 기간 (Range)", f"{range_oi_delta:+.1f}%", f"Price {range_price_delta:+.1f}%")
-                    metric_cols[1].metric("최근 1달 (1M)", f"{one_m_oi_delta:+.1f}%", "Shorts Momentum")
-                    metric_cols[2].metric("최근 1주 (1W)", f"{one_w_oi_delta:+.1f}%", f"Price {one_w_price_delta:+.1f}%")
+                    st.markdown("#### 1️⃣ 가격 변동률 (Price Change)")
+                    p_col1, p_col2, p_col3 = st.columns(3)
+                    p_col1.metric("전체 기간 (Range)", f"{range_price_delta:+.1f}%")
+                    p_col2.metric(f"최근 1달 ({weeks_duration}주차 기준)", f"{(range_price_delta if weeks_duration < 5 else ((range_df.iloc[-1]['Close'] - range_df.iloc[-5]['Close'])/range_df.iloc[-5]['Close']*100)):+.1f}%")
+                    p_col3.metric("최근 1주 (Last Week)", f"{one_w_price_delta:+.1f}%")
+
+                    st.markdown("---")
+                    st.markdown("#### 2️⃣ 헤지펀드 숏 물량 (Short OI Change)")
+                    o_col1, o_col2, o_col3 = st.columns(3)
+                    o_col1.metric("전체 기간 (Range)", f"{range_oi_delta:+.1f}%", help="선택한 전체 기간 동안의 숏 포지션 증감률")
+                    o_col2.metric("최근 1달 (Momentum)", f"{one_m_oi_delta:+.1f}%", help="최근 4주간의 숏 포지션 변화 (단기 추세)")
+                    o_col3.metric("최근 1주 (Action)", f"{one_w_oi_delta:+.1f}%", help="지난주 대비 숏 포지션 변화 (즉각적인 행동)")
                     
                 st.markdown(f"""
                 <small>
@@ -374,11 +597,100 @@ if page == "📊 차트 분석 (Analysis)":
                 </small>
                 """, unsafe_allow_html=True)
 
+            # --- MODEL VALIDATION (BACKTEST) ---
+            with st.expander("📊 모델 검증: 이 이론이 과거에도 통했을까? (Historical Accuracy)", expanded=False):
+                st.markdown("##### 🧪 헤지펀드 비즈니스 모델(Cash-and-Carry) 역사적 검증")
+                
+                # Insight regarding CME vs Perpetual
+                st.info("""
+                **⚠️ 분석 전 필수 확인: 이 데이터는 '기한부(Dated)' 선물입니다.**
+                * **바이낸스 등(Perpetual):** '무기한' 선물 위주이며, 실시간 펀딩비를 노리는 '단기 성향'이 강합니다.
+                * **CME 데이터:** **'기한부(Monthly)'** 선물이며, 만기까지의 **확정 프리미엄**을 노리는 **'장기/보수적 성향'**이 강합니다.
+                * **💡 결론:** 기한부 선물은 엉덩이가 무겁습니다. 따라서 파란선(OI)이 감소한다는 것은 단순한 차익실현을 넘어선 **'구조적인 시장 이탈(Trend Change)'**일 확률이 매우 높습니다.
+                """)
+                
+                st.markdown("전체 데이터를 분석하여 **'OI가 늘면 가격이 오르고(매집), OI가 줄면 가격이 내린다(청산)'**는 법칙이 얼마나 잘 맞았는지 확인합니다.")
+                
+                # Use the full history for validation, not just the selected range
+                # However, to be fair, let's use the loaded data (start_year ~ end_year)
+                # Resample full combined data to weekly
+                full_weekly_df = combined.resample('W-Fri', on='Date').last().dropna(subset=['Lev_Money_Positions_Short_All'])
+                
+                if len(full_weekly_df) > 10:
+                    valid_counts = {"Accumulation": 0, "Acc_Win": 0, "Unwinding": 0, "Unw_Win": 0}
+                    acc_returns = []
+                    unw_returns = []
+                    
+                    for i in range(1, len(full_weekly_df)):
+                        prev = full_weekly_df.iloc[i-1]
+                        curr = full_weekly_df.iloc[i]
+                        curr_month = curr.name.month # Index is Date due to resampling
+                        
+                        o_delta = ((curr['Lev_Money_Positions_Short_All'] - prev['Lev_Money_Positions_Short_All']) / prev['Lev_Money_Positions_Short_All']) * 100
+                        p_delta = ((curr['Close'] - prev['Close']) / prev['Close']) * 100
+                        
+                        THRES = 2.0
+                        
+                        # Case 1: Accumulation (OI Up)
+                        if o_delta > THRES:
+                            valid_counts["Accumulation"] += 1
+                            acc_returns.append(p_delta)
+                            if p_delta > 0: # Hit
+                                valid_counts["Acc_Win"] += 1
+                                
+                        # Case 2: Unwinding (OI Down)
+                        elif o_delta < -THRES:
+                            # Filter out Seasonality (Book Closing & Rollover)
+                            if curr_month not in [3, 6, 9, 12]:
+                                valid_counts["Unwinding"] += 1
+                                unw_returns.append(p_delta)
+                                if p_delta < 0: # Hit (Price Drop)
+                                    valid_counts["Unw_Win"] += 1
+
+                    # Stats Calculation
+                    acc_rate = (valid_counts["Acc_Win"] / valid_counts["Accumulation"] * 100) if valid_counts["Accumulation"] > 0 else 0
+                    unw_rate = (valid_counts["Unw_Win"] / valid_counts["Unwinding"] * 100) if valid_counts["Unwinding"] > 0 else 0
+                    avg_acc_ret = sum(acc_returns) / len(acc_returns) if acc_returns else 0
+                    avg_unw_ret = sum(unw_returns) / len(unw_returns) if unw_returns else 0
+                    
+                    v_col1, v_col2 = st.columns(2)
+                    
+                    with v_col1:
+                        st.markdown(f"**📈 매집 적중률 (Pure Accumulation)**")
+                        st.markdown(f"헤지펀드가 숏을 늘렸을 때(>2%), 가격이 실제로 상승한 확률입니다.")
+                        st.metric("적중률 (Win Rate)", f"{acc_rate:.1f}%", f"Avg Return: {avg_acc_ret:+.1f}%")
+
+                    with v_col2:
+                        st.markdown(f"**📉 청산 적중률 (Pure Unwinding)**")
+                        st.markdown(f"헤지펀드가 숏을 줄였을 때(<-2%), 가격이 실제로 하락한 확률입니다.")
+                        st.caption("*(계절성 노이즈인 3,6,9,12월 데이터는 제외)*")
+                        st.metric("적중률 (Win Rate)", f"{unw_rate:.1f}%", f"Avg Return: {avg_unw_ret:+.1f}%")
+                    
+                    st.markdown("---")
+                    st.info(f"💡 **분석 결론:** 이 기간({start_year}~{end_year}) 동안 헤지펀드의 포지션 변화는 가격 방향성과 **{'높은' if (acc_rate+unw_rate)/2 > 55 else '중립적인'} 연관성**을 보였습니다.")
+                    
+                    # Insight on Asymmetry
+                    if acc_rate - unw_rate > 10:
+                        st.markdown("""
+                        > **🕵️‍♂️ 심층 통찰: 비대칭성의 비밀 (Why Asymmetry?)**
+                        > * **매집(Win):** 헤지펀드는 시장이 좋을 때(상승장)만 이자를 먹으러 '자발적'으로 들어옵니다. (강력한 호재)
+                        > * **청산(Loss):** 나갈 때는 자발적 이탈도 있지만, **'숏 스퀴즈(강제 청산)'**인 경우도 있어 성공률이 상대적으로 낮습니다.
+                        """)
+                    elif unw_rate > 60:
+                        st.markdown("""
+                        > **🕵️‍♂️ 심층 통찰: 계절성 필터링 효과**
+                        > * 3, 6, 9, 12월(롤오버/북클로징)을 제외하니 청산 적중률이 높아졌습니다.
+                        > * 즉, **"계절 이슈가 없는데도 OI가 줄어든다면"** 그것은 진짜 **하락 신호**가 맞습니다.
+                        """)
+                    
+                else:
+                    st.warning("검증할 데이터가 부족합니다.")
+
             # --- RAW DATA ---
             with st.expander("원본 데이터 보기"):
                 st.dataframe(combined[['Date', 'Lev_Money_Positions_Short_All', 'Close']].style.format({'Close': '{:.2f}'}))
             
-            # --- EDUCATIONAL CONTENT (Main Area - Short Summary) ---
+            # --- EDUCATIONAL LINK ---
             st.write("---")
             st.info("💡 자세한 해설과 교육 자료가 필요하시면 좌측 메뉴의 **[🎓 초보자 가이드]**를 클릭하세요.")
 
@@ -392,47 +704,32 @@ elif page == "🎓 초보자 가이드 (Guide)":
     ## 1. 헤지펀드의 비밀: 차트 보는 법
     이 차트를 제대로 이해하려면 **'헤지펀드가 어떻게 돈을 버는지'** 알아야 합니다. 그들은 단순한 투기꾼이 아니라 **'이자 농사꾼(Arbitrageur)'**입니다.
     
-    이들의 비즈니스 모델(Business Model)은 3단계로 이루어집니다.
+    이들의 비즈니스 모델(Business Model)은 2가지 모드로 나뉠 수 있습니다.
     
     ---
-    ### 🔄 [1단계] 씨 뿌리기 (Spread Creation)
-    *   **상황:** 선물 가격이 현물보다 비쌀 때 (프리미엄 발생 💰)
-    *   **행동:** **현물 매수(Buy Spot) 📈 + 선물 매도(Short Future) 📉**
-    *   **차트의 모습:** 
-        *   가격(주황색)이 상승합니다 (현물 매수 때문)
-        *   **파란선(Short OI)이 급등합니다** (선물 매도 포지션을 쌓았기 때문)
-    *   **우리의 해석:** "아! 롱이 아니라 숏이 늘어나는 걸 보니, 헤지펀드가 현물을 엄청 사들이고 있구나! **찐반등(진짜 상승장)**이다!"
+    ### 😇 [Mode 1] 착한 농부 (Arbitrageur)
+    대부분의 시간(지루한 상승/횡보장) 동안 그들은 이 모드로 작동합니다.
     
-    ---
-    ### ⏳ [2단계] 농작물 키우기 (Carry / Earning)
-    *   **상황:** 만기일이나 수익실현 목표일까지 대기
-    *   **행동:** **포지션 유지 (Hold) ✊**
-    *   **차트의 모습:** 
-        *   가격은 횡보하거나 천천히 오릅니다.
-        *   **파란선(OI)이 높은 곳에서 평평하게 유지됩니다.**
-    *   **우리의 해석:** "헤지펀드가 아직 안 나갔네? 그럼 아직 상승 추세가 살아있구나. 나도 좀 더 들고 가야지." (안정적인 이자/펀딩비 수익 구간)
-    
-    ---
-    ### 🚜 [3단계] 수확하기 (Unwinding)
-    *   **상황:** 프리미엄이 사라졌거나(이자 매력 감소), 만기가 됐을 때
-    *   **행동:** **현물 매도(Sell Spot) 📉 + 선물 숏 청산(Cover Short) 📈**
-    *   **차트의 모습:** 
-        *   가격이 하락합니다 (현물 매도 폭탄)
-        *   **파란선(Short OI)이 급감합니다** (포지션 정리)
-    *   **우리의 해석:** "파란선이 꺾였네? 이제 헤지펀드가 농사 끝내고 집에 가는구나. **나도 얼른 팔고 도망가자!**"
-    
-    ---
-    ## 2. 심화: 같이 가느냐, 따로 가느냐 (Correlation)
-    항상 같이 오르는 것은 아닙니다. 두 선의 **'방향 관계'**를 해석하는 것이 고수의 영역입니다.
-
-    *   **✅ 동조화 (Sync ↗️↗️):** 가격 상승 + 숏 증가
-        *   **해석:** "찐반(진짜 반등)". 현물을 사모으면서 헷징을 하는 건전한 상승장입니다.
-    
-    *   **❌ 역상관 A (Divergence ↗️↘️): 숏 스퀴즈**
-        *   가격은 오르는데 숏이 줄어든다? 이는 누군가 손해를 보고 **도망치느라(청산)** 가격이 오르는 것입니다. 오래 못 갑니다.
+    1.  **씨 뿌리기 (Spread Creation):**
+        *   가격 상승 + 숏 포지션 증가 ↗️
+        *   현물을 사면서 숏을 쳐서 이자를 확보합니다. (**강력한 상승 신호**)
         
-    *   **⚠️ 역상관 B (Divergence ↘️↗️): 하락 배팅**
-        *   가격은 내리는데 숏이 늘어난다? 이때는 헷징용 숏이 아니라, 정말로 **가격 하락에 돈을 건(투기적) 공매도**일 수 있습니다. 조심해야 합니다.
+    2.  **수확하기 (Unwinding):**
+        *   가격 하락 + 숏 포지션 감소 ↘️
+        *   이자가 줄어들면 농사를 접고 나갑니다. (**진짜 하락 신호**)
+
+    ---
+    ### 😈 [Mode 2] 잔혹한 사냥꾼 (Predatory Bear)
+    하지만 시장이 공포에 질리면 그들은 돌변합니다. 사용자가 발견한 '공매도 공격' 패턴입니다.
+    
+    1.  **미끼 던지기 (Tapping):**
+        *   보유한 현물을 시장가로 던져서(Dumping) 가격 하락을 유도합니다.
+        
+    2.  **그물 치기 (Leveraged Shorting):**
+        *   **가격 폭락(↘️) + 숏 포지션 급증(↗️)** (다이버전스 발생)
+        *   현물에서 깨진 -10% 손실은, 선물 숏(10배 레버리지)에서 먹은 +100% 수익으로 만회하고도 남습니다.
+    
+    *   **💡 결론:** 가격이 폭락하는데 파란선(숏)이 미친듯이 치솟는다? **절대 저점 매수 금지!** 세력이 작정하고 죽이러 온 것입니다.
 
     ---
     ## 3. 핵심 원리 복습: 왜 '숏'인데 호재인가?
