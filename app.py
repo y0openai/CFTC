@@ -47,43 +47,6 @@ SHOW_DOLLAR_VALUE = st.sidebar.checkbox(f"금액($)으로 환산하여 보기 (C
 # Smoothing Option
 USE_MA = st.sidebar.checkbox("이동평균선(MA) 적용 (4주) - 추세 보기", value=True)
 
-# Educational Content
-st.sidebar.markdown("---")
-with st.sidebar.expander("🎓 초보 트레이더를 위한 가르침"):
-    st.markdown("""
-    ### 1. 왜 헤지펀드는 '숏(Short)'을 칠까요?
-    초보자는 **'숏 = 하락 배팅'**이라고 생각하기 쉽습니다. 하지만 이 차트에서 헤지펀드의 숏은 전혀 다른 의미입니다.
-    
-    그들은 가격을 맞추는 도박을 하지 않습니다. 대신 **'무위험 차익거래(Arbitrage)'**를 합니다. 이를 **캐시 앤 캐리(Cash-and-Carry)** 전략이라고 부릅니다.
-    
-    ### 2. 역설: 숏이 늘어나면 왜 가격이 오르나요?
-    선물 가격은 보통 현물보다 비쌉니다(수수료/기대감 등). 헤지펀드는 이 '가격 차이(Premium)' 따먹기를 합니다.
-    
-    1.  **현물을 산다 (Buy Spot) 📈** → 가격 상승 유발
-    2.  동시에 **선물을 판다 (Short Future) 📉** → 헤지펀드 숏 OI 증가
-    
-    즉, 차트의 **파란선(숏 물량)이 치솟는다는 것**은, 뒤에서 기관들이 **비트코인 현물을 미친듯이 사모으고 있다는 강력한 증거**입니다.
-    
-    ### 3. 왜 2024년부터 중요한가요?
-    비트코인 ETF 승인 이후, 월가(Wall St.)의 거대 자본이 시장에 들어왔습니다. 이들은 코인의 미래를 믿어서라기보다, **안정적인 10~15%의 연수익(이자)**을 노리고 들어온 자금입니다.
-    
-    따라서 2024년 이후의 비트코인 가격은 이 **'이자 농사꾼(헤지펀드)'들이 돈을 넣느냐(현물 매수), 돈을 빼느냐(현물 매도)**에 따라 움직이는 경향이 매우 강해졌습니다.
-    
-    **💡 요약:** 파란선(숏) 급등을 두려워 마세요. 그것은 로켓의 연료(현물 매수)가 채워지고 있다는 뜻입니다.
-
-    ### 4. 심화: 같이 가느냐, 따로 가느냐 (Correlation)
-    항상 같이 오르는 것은 아닙니다. 두 선의 **'방향 관계'**를 해석하는 것이 고수의 영역입니다.
-
-    *   **✅ 동조화 (Sync ↗️↗️):** 가격 상승 + 숏 증가
-        *   **해석:** "찐반(진짜 반등)". 현물을 사모으면서 헷징을 하는 건전한 상승장입니다. 상승 추세가 길게 지속될 가능성이 높습니다.
-    
-    *   **❌ 역상관 A (Divergence ↗️↘️):** 가격 상승 + 숏 감소
-        *   **해석:** **"숏 스퀴즈(Short Squeeze)"**. 현물 매수세가 아니라, 공매도친 세력이 손해를 보며 도망치느라 가격이 급등하는 것입니다. 단기 급등 후 폭락할 위험이 큽니다.
-        
-    *   **⚠️ 역상관 B (Divergence ↘️↗️):** 가격 하락 + 숏 증가
-        *   **해석:** **"하락 배팅"**. 이 경우의 숏은 차익거래가 아니라, 진짜로 가격이 떨어질 것에 돈을 거는 '투기적 공매도'일 수 있습니다. 추가 하락을 조심해야 합니다.
-    """)
-
 @st.cache_data(ttl=3600*24)
 def load_data(start_y, end_y, conf):
     # 1. Load CFTC Data
@@ -273,48 +236,47 @@ else:
         forecast_txt = "충분한 데이터가 없습니다."
         color = "gray"
         
-        # Thresholds (%) - Tuned for Sensitivity
-        # Hedge funds manage billions; a 2% shift is massive. Lowering threshold.
+        # Thresholds (%)
         SIGNIFICANT_CHANGE = 1.5 
         
-        if oi_delta_pct > SIGNIFICANT_CHANGE: # OI UP
+        if oi_delta_pct > SIGNIFICANT_CHANGE: # OI UP (Phase 1: Spread Creation)
             if price_delta_pct > SIGNIFICANT_CHANGE:
-                phase_title = f"🚀 상승 가속 (Fueling) {macro_trend}"
+                phase_title = f"🌱 1단계: 파종 (Spread Creation) {macro_trend}"
                 color = "green"
-                forecast_txt = "상승 추세가 매우 견고합니다. OI가 꺾이기 전까지는 추세 추종(Trend Following) 전략이 유효합니다."
-                evidence_txt = f"선택 구간 동안 **{ticker_name}** 가격이 **{price_delta_pct:.1f}% 상승**하는 동안, 헤지펀드도 숏 물량을 **{oi_delta_pct:.1f}%나 더 쌓았습니다**. 이것은 '상승 프리미엄'을 노린 동반 매수세입니다."
+                forecast_txt = "**[강력 매수 구간]** 헤지펀드가 차익거래(Arbitrage)를 위해 현물을 공격적으로 사들이고 있습니다. 프리미엄 따먹기 자금이 유입되는 동안 상승 추세는 지속될 것입니다."
+                evidence_txt = f"**{ticker_name}** 가격 상승(**+{price_delta_pct:.1f}%**)과 함께 숏 OI가 급증(**+{oi_delta_pct:.1f}%**)했습니다. 이는 하락 배팅이 아니라, 현물을 매수하고 선물을 파는 **'포지션 구축'** 활동입니다."
             elif -SIGNIFICANT_CHANGE <= price_delta_pct <= SIGNIFICANT_CHANGE:
-                phase_title = f"🔒 폭등 전조/매집 (Accumulation) {macro_trend}"
+                phase_title = f"📦 매집/축적 (Accumulation) {macro_trend}"
                 color = "blue"
-                forecast_txt = "**가장 주목해야 할 구간입니다.** 가격은 멈췄지만 고래들은 물량을 쓸어 담고 있습니다. 강력한 시세 분출이 일어났던 구간일 확률이 높습니다."
-                evidence_txt = f"가격은 **{price_delta_pct:.1f}%로 제자리**인데, 숏 OI(스마트 머니)만 **{oi_delta_pct:.1f}% 급증**했습니다. 에너지가 응축되었던 구간입니다."
+                forecast_txt = "**[폭발 임박]** 가격은 묶어두고(횡보) 물량을 쓸어 담고 있습니다. 스프레드(가격차)가 벌어져 헤지펀드의 진입 유인이 극대화된 상태입니다."
+                evidence_txt = f"가격은 **{price_delta_pct:.1f}%로 제자리**인데, 숏 OI만 **{oi_delta_pct:.1f}% 급증**했습니다. 조용히 현물을 매집하며 차익거래 포지션을 쌓고 있습니다."
             else:
-                phase_title = f"📉 헷징/방어 (Hedging) {macro_trend}"
+                phase_title = f"🛡️ 방어적 헷징 (Defensive Hedging) {macro_trend}"
                 color = "orange"
-                forecast_txt = "하락장에 대비한 방어적 포지션 구축 단계입니다. 무리한 진입을 자제하세요."
-                evidence_txt = f"가격이 **{price_delta_pct:.1f}% 하락**하는데 숏 OI가 **{oi_delta_pct:.1f}% 증가**했습니다. 추가 하락을 염두에 둔 헷징 물량입니다."
+                forecast_txt = "하락장에 대비해 보유 현물의 가치를 지키려는 방어적 숏입니다. 추가 하락 가능성이 있습니다."
+                evidence_txt = f"가격이 하락(**{price_delta_pct:.1f}%**)하는데 숏 OI가 증가(**{oi_delta_pct:.1f}%**)합니다. 이것은 차익거래보다는 순수한 **'가격 하락 방어(Insurance)'** 목적의 진입으로 보입니다."
                 
-        elif oi_delta_pct < -SIGNIFICANT_CHANGE: # OI DOWN
+        elif oi_delta_pct < -SIGNIFICANT_CHANGE: # OI DOWN (Phase 3: Unwinding)
             if price_delta_pct < -SIGNIFICANT_CHANGE:
-                phase_title = f"🌊 대규모 청산 (Unwinding) {macro_trend}"
+                phase_title = f"🚜 3단계: 수확 (Unwinding) {macro_trend}"
                 color = "red"
-                forecast_txt = "**'떨어지는 칼날'** 구간입니다. 이 청산 사이클이 끝나고 지표가 안정을 찾을 때(횡보)까지 롱 포지션 진입을 미루세요."
-                evidence_txt = f"**{ticker_name}** **{price_delta_pct:.1f}% 하락** + 숏 OI **{oi_delta_pct:.1f}% 급감**. 차익거래 매물이 시장가로 쏟아지며 시세를 무너뜨린 구간입니다."
+                forecast_txt = "**[매도/관망 구간]** '이자 농사'가 끝나고 청산하는 단계입니다. 헤지펀드가 현물을 시장가로 던지면서(매도) 포지션을 정리하고 있습니다. 소나기는 피하세요."
+                evidence_txt = f"**{ticker_name}** 가격 급락(**{price_delta_pct:.1f}%**)과 숏 OI 급감(**{oi_delta_pct:.1f}%**)이 동반됩니다. 차익거래 기회가 사라져 자금이 이탈(Exit)하는 전형적인 **청산 사이클**입니다."
             elif price_delta_pct > SIGNIFICANT_CHANGE:
-                phase_title = "🎁 설거지 (Distribution)"
+                phase_title = "💸 숏 스퀴즈 (Short Squeeze)"
                 color = "orange"
-                forecast_txt = "강력한 고점 신호입니다. 가격은 오르는데 세력은 이탈했습니다."
-                evidence_txt = f"가격은 **{price_delta_pct:.1f}% 올랐지만**, 스마트 머니는 숏을 **{oi_delta_pct:.1f}% 줄이며** 오히려 탈출했습니다. 개미에게 물량을 넘긴 전형적인 설거지 구간입니다."
+                forecast_txt = "비정상적인 가격 상승입니다. 숏 포지션이 손실을 못 이기고 강제 청산당하며 가격을 밀어 올리는 중입니다. 추격 매수는 위험합니다."
+                evidence_txt = f"가격은 오르는데(**+{price_delta_pct:.1f}%**) 숏 OI는 줄어들고(**{oi_delta_pct:.1f}%**) 있습니다. 자발적 수익 실현이 아니라, **'도망치는'** 상황입니다."
             else:
-                phase_title = "💤 관심 이탈"
+                phase_title = "🍂 관심 저하 (Cooling Off)"
                 color = "gray"
-                forecast_txt = "관망 구간입니다."
-                evidence_txt = "가격과 OI 모두 뚜렷한 감소세를 보이며 시장 관심이 식었습니다."
-        else:
-            phase_title = "⚖️ 균형 (Equilibrium)"
+                forecast_txt = "시장의 관심이 식어가고 있습니다. 뚜렷한 주매수 주체가 없습니다."
+                evidence_txt = "가격과 OI 모두 감소세입니다. 자금이 빠져나가며 시장의 활력이 떨어지고 있습니다."
+        else: # OI Stable (Phase 2: Carry)
+            phase_title = f"⏳ 2단계: 보유/이자 수익 (Carry) {macro_trend}"
             color = "green" if price_delta_pct > -5 else "gray"
-            forecast_txt = "매도세가 진정되었습니다. 저점 매수를 고려해 볼 만합니다."
-            evidence_txt = f"선택 구간 동안 숏 OI 변화가 **{oi_delta_pct:.1f}%**로 안정적입니다. 거대 자본의 이탈이 멈췄습니다."
+            forecast_txt = "**[보유 구간]** 헤지펀드가 구축한 포지션을 유지하며 펀딩비(이자) 수익을 즐기고 있습니다. 대규모 이탈 신호가 없다면 추세는 유지됩니다."
+            evidence_txt = f"숏 OI 변화가 **{oi_delta_pct:.1f}%**로 안정적입니다. 거대 자본이 포지션을 굳건히 지키고(Holding) 있습니다."
 
         # 3. Render UI
         with st.container():
@@ -345,3 +307,40 @@ else:
         # --- RAW DATA ---
         with st.expander("원본 데이터 보기"):
             st.dataframe(combined[['Date', 'Lev_Money_Positions_Short_All', 'Close']].style.format({'Close': '{:.2f}'}))
+        
+        # --- EDUCATIONAL CONTENT (Main Area) ---
+        st.write("---")
+        st.subheader("🎓 헤지펀드의 수익 모델 (Business Model)")
+        st.markdown("""
+        이 차트를 제대로 이해하려면 **'헤지펀드가 어떻게 돈을 버는지'** 그들의 비즈니스 사이클을 알아야 합니다. 그들은 단순한 투기꾼이 아니라 **'이자 농사꾼(Arbitrageur)'**입니다.
+        
+        ### 🔄 1단계: 씨 뿌리기 (Spread Creation)
+        *   **상황:** 선물 가격이 현물보다 비쌀 때 (프리미엄 발생)
+        *   **행동:** **현물 매수 📈 + 선물 매도 📉**
+        *   **차트:** 가격 상승(Green) & 파란선(OI) 급등
+        *   **해석:** 차익거래를 위한 포지션을 구축하는 단계입니다. 현물을 엄청나게 사들이므로 **강력한 상승장**을 만듭니다.
+        
+        ### ⏳ 2단계: 농작물 키우기 (Carry / Earning)
+        *   **상황:** 포지션 구축 완료 후 만기일/수익실현까지 대기
+        *   **행동:** **포지션 유지 (Hold) ✊**
+        *   **차트:** 파란선(OI)이 고점에서 유지됨
+        *   **해석:** 가만히 있어도 펀딩비(이자)와 프리미엄 수익이 들어옵니다. 이 기간 동안 시장은 안정적인 **우상향 또는 횡보**를 보입니다.
+        
+        ### 🚜 3단계: 수확하기 (Unwinding)
+        *   **상황:** 프리미엄이 사라지거나(축소), 만기가 도래했을 때
+        *   **행동:** **현물 매도 📉 + 선물 숏 청산 📈**
+        *   **차트:** 가격 하락(Red) & 파란선(OI) 급감
+        *   **해석:** 수익을 확정 짓고 시장을 떠나는 단계입니다. 헷징해둔 현물을 시장에 내다 팔기 때문에 **가격 하락(조정)**이 발생합니다.
+        
+        ### 4. 심화: 같이 가느냐, 따로 가느냐 (Correlation)
+        항상 같이 오르는 것은 아닙니다. 두 선의 **'방향 관계'**를 해석하는 것이 고수의 영역입니다.
+
+        *   **✅ 동조화 (Sync ↗️↗️):** 가격 상승 + 숏 증가
+            *   **해석:** "찐반(진짜 반등)". 현물을 사모으면서 헷징을 하는 건전한 상승장입니다. 상승 추세가 길게 지속될 가능성이 높습니다.
+        
+        *   **❌ 역상관 A (Divergence ↗️↘️):** 가격 상승 + 숏 감소
+            *   **해석:** **"숏 스퀴즈(Short Squeeze)"**. 현물 매수세가 아니라, 공매도친 세력이 손해를 보며 도망치느라 가격이 급등하는 것입니다. 단기 급등 후 폭락할 위험이 큽니다.
+            
+        *   **⚠️ 역상관 B (Divergence ↘️↗️):** 가격 하락 + 숏 증가
+            *   **해석:** **"하락 배팅"**. 이 경우의 숏은 차익거래가 아니라, 진짜로 가격이 떨어질 것에 돈을 거는 '투기적 공매도'일 수 있습니다. 추가 하락을 조심해야 합니다.
+        """)
