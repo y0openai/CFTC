@@ -1,0 +1,21 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data Cache
+data_cache/
+*.zip
+*.csv
+*.txt
+
+# Virtual Env
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
