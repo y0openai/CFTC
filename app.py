@@ -647,24 +647,27 @@ if page == "📊 차트 분석 (Analysis)":
                                     st.subheader(data.get("header", "Strategy Flow"))
                                     
                                     # Horizontal Scrollable Cards using HTML/CSS
+                                    import html
                                     phases = data.get("phases", [])
                                     
                                     cards_html = ""
                                     for p in phases:
-                                        # Convert newlines to breaks for HTML rendering
-                                        narrative_html = p['narrative'].replace('\n', '<br>')
+                                        # Safe HTML Escaping
+                                        safe_title = html.escape(str(p.get('title', '')))
+                                        safe_period = html.escape(str(p.get('period', '')))
+                                        safe_narrative = html.escape(str(p.get('narrative', ''))).replace('\n', '<br>')
                                         
                                         cards_html += f"""
-                                        <div style="min-width: 320px; max-width: 320px; background: rgba(128, 128, 128, 0.1); border: 1px solid rgba(128, 128, 128, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 5px; flex-shrink: 0;">
-                                            <div style="font-weight: bold; font-size: 1.15em; margin-bottom: 8px; color: #FFD700;">{p['title']}</div>
-                                            <div style="font-size: 0.85em; color: #ccc; margin-bottom: 15px; border-bottom: 1px solid #555; padding-bottom: 5px;">🗓️ {p['period']}</div>
-                                            <div style="font-size: 0.95em; line-height: 1.6; color: #eee;">{narrative_html}</div>
+                                        <div style="min-width: 300px; max-width: 300px; background-color: #262730; border: 1px solid #454545; border-radius: 10px; padding: 15px; margin-right: 15px; flex-shrink: 0; color: white;">
+                                            <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 8px; color: #FFD700;">{safe_title}</div>
+                                            <div style="font-size: 0.8em; color: #aaa; margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 5px;">🗓️ {safe_period}</div>
+                                            <div style="font-size: 0.9em; line-height: 1.5; color: #e0e0e0;">{safe_narrative}</div>
                                         </div>
                                         """
                                     
                                     # Scrolling Container
                                     final_html = f"""
-                                    <div style="display: flex; flex-direction: row; overflow-x: auto; gap: 20px; padding: 10px 5px 20px 5px;">
+                                    <div style="display: flex; flex-direction: row; overflow-x: auto; padding-bottom: 15px;">
                                         {cards_html}
                                     </div>
                                     """
