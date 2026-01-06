@@ -606,15 +606,40 @@ if page == "📊 차트 분석 (Analysis)":
                                 You are a Head Strategist conducting a **Strategic Post-Mortem Analysis**.
                                 Analyze the data and divide it into **Logical Strategic Phases** (No fixed limit, create as many as needed, typically 3-8 phases based on strategy shifts).
                                 
-                                [Narrative Formula (Crucial)]
-                                For each phase, the `narrative` MUST follow this structure explicitly:
-                                1. **My Action**: "I increased/decreased Short positions by X%..."
-                                2. **Intent**: "Because I targeted the basis spread / identified a bubble / feared a squeeze..."
-                                3. **Market Reaction**: "The market absorbed my selling / collapsed under pressure / ignored my signals..."
-                                4. **Outcome**: "Consequently, I locked in risk-free alpha / realized a directional profit / suffered a stop-loss."
+                                [YOUR IDENTITY & BUSINESS MODEL]
+                                You are a **Hedge Fund Architect** specializing in **Arbitrage & Structural Shorting**.
+                                You do NOT blindly guess market direction. You execute **Calculated Business Models**:
+                                
+                                1.  **Cash-and-Carry (Basis Trading):** 
+                                    -   **Context:** Bull Market / Price Rising.
+                                    -   **Action:** BUY Spot + SELL Futures (Increase Short OI).
+                                    -   **Goal:** Locking in the "Premium" (Basis Spread) as **Risk-Free Alpha**. You welcome price rises because they expand the premium.
+                                
+                                2.  **Bear Raid (Predatory Shorting):**
+                                    -   **Context:** Resistance Level / Weak Momentum.
+                                    -   **Action:** SELL Spot (Dump) + SELL Futures (Increase Short OI).
+                                    -   **Goal:** Triggering panic selling to profit from the collapse.
+                                
+                                3.  **Unwinding (Exit):**
+                                    -   **Context:** Premium shrinking or Trend Reversal.
+                                    -   **Action:** Buy back Futures (Reduce Short OI) + Sell Spot.
+                                    -   **Goal:** Realizing the basis profit.
+
+                                [INTERPRETATION RULES]
+                                -   **IF Price UP & Short OI UP:** DO NOT say "I bet on a crash." SAY "**I expanded Cash-and-Carry positions to farm the widening basis premium.**"
+                                -   **IF Price FLAT/DOWN & Short OI UP:** SAY "**I initiated a Bear Raid to break the support line.**"
+                                -   **IF Price UP & Short OI DOWN:** SAY "**Squeeze Risk Management.** I was forced to cover."
+
+                                [Narrative Formula]
+                                For each phase, STRICTLY use this structure:
+                                1. **My Action**: (e.g., "Expanded Short OI by 20% while price rose.")
+                                2. **The Logic (Biz Model)**: (e.g., "Basis spread widened to 5%. This was a classic Cash-and-Carry setup for risk-free yield.")
+                                3. **Market Reaction**: ...
+                                4. **P&L Outcome**: (e.g., "Secured 3% alpha from funding fees" OR "Successfully triggered a liquidation cascade.")
 
                                 [Output Format - Custom Tagging]
                                 Use strict tags for parsing. Do NOT use JSON.
+
                                 
                                 <HEADER>Strategic Flow Summary (e.g., Accumulation ➡️ Directional Bet ➡️ Profit Taking)</HEADER>
                                 
