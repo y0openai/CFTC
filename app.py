@@ -513,6 +513,11 @@ if page == "📊 차트 분석 (Analysis)":
                 final_color = "red" 
                 final_forecast_text = "🚨 **함정 경고(Bull Trap):** 세력의 공매도 공격이 감지되었습니다. 통계적으로 **1주 내 기술적 반등(67%)**이 발생할 수 있으나, **4주 후에는 하락할 확률(55%)**이 더 높습니다. 단기 반등을 이용하여 **물량을 정리(Exit)**하는 것이 현명합니다."
 
+            elif (one_w_oi_delta < -5.0) and (one_w_price_delta > 1.0):
+                 final_verdict = "💥 숏 스퀴즈 경고 (Fake Pump Alert)"
+                 final_color = "orange"
+                 final_forecast_text = "🚨 **가짜 반등 경고:** 가격 상승과 함께 숏 포지션이 급감했습니다. 세력의 신규 매수가 아닌 **단순 청산(Covering)**일 가능성이 높습니다. 통계적으로 **64% 확률로 1주 내 다시 하락**했습니다. 추격 매수를 자제하세요."
+
             elif "매집" in trend_status and one_w_oi_delta < -5:
                 final_verdict = "⚠️ 추세 이탈 경고 (Trend Reversal)"
                 final_color = "orange"
