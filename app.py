@@ -577,7 +577,7 @@ if page == "📊 차트 분석 (Analysis)":
                         with st.spinner("🕶️ 헤지펀드 수석 전략가가 비밀 장부를 확인하고 있습니다..."):
                             try:
                                 genai.configure(api_key=gemini_api_key)
-                                model = genai.GenerativeModel('gemini-1.5-flash')
+                                model = genai.GenerativeModel('gemini-2.0-flash-exp')
                                 
                                 # Prepare Prompt Data
                                 sample_df = range_df.copy()
