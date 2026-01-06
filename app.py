@@ -82,7 +82,7 @@ if page == "📊 차트 분석 (Analysis)":
             st.error(f"{asset_conf['ticker']} 가격 데이터를 가져올 수 없습니다.")
         else:
             # Data Processing
-            cftc_data = cftc_data.sort_values('Date')
+            cftc_data = cftc_data.sort_values('Date').drop_duplicates(subset=['Date'], keep='last') # Fix duplicates
             btc_data.index = pd.to_datetime(btc_data.index).tz_localize(None) 
             
             combined = pd.merge_asof(cftc_data, btc_data['Close'], left_on='Date', right_index=True, direction='nearest')
