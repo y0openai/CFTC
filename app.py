@@ -705,9 +705,7 @@ if page == "📊 차트 분석 (Analysis)":
                                     advice_txt = advice_match.group(1).strip() if advice_match else "No Advice"
 
                                     # --- Render UI ---
-                                    st.markdown("---")
                                     st.markdown(f"### 🍷 헤지펀드 전략가의 회고록")
-                                    st.subheader(header_txt)
                                     
                                     import streamlit.components.v1 as components
                                     
