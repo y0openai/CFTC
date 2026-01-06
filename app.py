@@ -591,31 +591,37 @@ if page == "📊 차트 분석 (Analysis)":
                                 
                                 prompt_text = f"""
                                 [Role]
-                                You are a ruthless, cynical, yet brilliant Head Strategist at a top Wall Street Hedge Fund. 
-                                You view retail investors ("ants") as necessary liquidity providers.
+                                You are a ruthless Head Strategist at a top Hedge Fund targeting the Korean market.
+                                You speak perfect, natural Korean (Hangul). Do NOT use Japanese or Chinese characters.
                                 
-                                [Data: My Trading Log (Price vs Short Position)]
+                                [Input Data: Price vs Short OI]
                                 {chr(10).join(prompt_rows)}
                                 
                                 [Task]
-                                Write a "Confession Report" analyzing the given period.
-                                1. Divide the period into 3-4 phases based on your strategy (e.g., "The Trap", "The Harvest", "The Squeeze").
-                                2. For each phase, explain your intent.
-                                   - **OI UP + Price UP:** "Arbitrage Farming Mode" (Collecting premium).
-                                   - **OI UP + Price DOWN:** "Bear Raid" (Predatory shorting).
-                                   - **OI DOWN:** "Exit/Squeeze" (Taking profit or fleeing).
-                                3. Use professional yet provocative language (e.g., "Yield Farming", "Alpha", "Liquidity", "Panic Sell").
-                                4. **[Create Future Strategy]**: Based on the *Last Week's Action* (the final data point), formulate a **"Next 1-Month Operation Plan"**.
-                                   - Imagine you are writing a confidential memo to your internal trading desk.
-                                   - Be specific: "We will increase shorts by 20% if price hits $X", "We will unwind positions if..."
-                                5. End with a [CEO Summary] giving a brutally honest advice to retail traders.
+                                Create a "Secret Trading Journal" with a strong narrative flow (Left to Right).
                                 
-                                [Format]
-                                - Valid Markdown.
-                                - **Start with a Horizontal Summary:** Use arrows (➡️) to show the strategy flow (e.g., `🌿 Phase 1: Farming ➡️ ⚡ Phase 2: Bear Raid ➡️ 💰 Phase 3: Exit`).
-                                - Use > Blockquotes for key insights ("Inner Voice").
-                                - Use concise, visual bullet points.
-                                - Language: **Korean** (Natural, dramatic storytelling).
+                                [Design & Structure]
+                                1. **Header (The Flow):** Start with a BIG bold arrow flow chart.
+                                   - Example: `### 🌿 1. 매집 (Accumulation) ➡️ ⚡ 2. 공매도 급습 (Bear Raid) ➡️ 💰 3. 설거지 (Exit)`
+                                
+                                2. **Phase Analysis (The Details):**
+                                   - Divide volume into 3 Phases.
+                                   - For each phase, explain your manipulative tactic.
+                                   - **Logic:**
+                                     * OI ↑ + Price ↑ = "개미 꼬시기 (Farming)"
+                                     * OI ↑ + Price ↓ = "공포 조장 (Bear Raid)"
+                                     * OI ↓ = "이익 실현 (Exit)"
+                                
+                                3. **Future Plan (The Next Move):**
+                                   - Based on the LAST data point, write a "Next 1-Month Secret Plan".
+                                   - "If price rebounds to $X, we short again." / "We are leaving this market."
+                                
+                                4. **CEO's Advice:** A cynical advice to retail investors.
+                                
+                                [Constraints]
+                                - **LANGUAGE: 100% KOREAN (Hangul ONLY). No Kanji, No Kana.**
+                                - Tone: Cynical, Intelligent, "The Big Short" style.
+                                - Use > Blockquotes for your inner thoughts.
                                 """
                                 
                                 response = model.generate_content(prompt_text)
