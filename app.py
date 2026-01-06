@@ -30,13 +30,6 @@ st.sidebar.markdown("---")
 # PAGE 1: CHART ANALYSIS
 # ==========================================
 if page == "📊 차트 분석 (Analysis)":
-    st.title("Crypto Price & Hedge Fund Short Position Analysis")
-    st.markdown("""
-    이 대시보드는 **CFTC(상품선물거래위원회)의 TFF(Traders in Financial Futures) 리포트**와 **코인 가격**을 오버레이하여 보여줍니다.
-    - **주황색/보라색 (좌축):** 코인 가격 (USD)
-    - **파란색 (우축):** 헤지펀드(Leveraged Funds) 숏 포지션 수량 (계약 수 or 추정 금액)
-    """)
-
     # Sidebar Settings (Only for Analysis Page)
     st.sidebar.header("설정 (Settings)")
 
