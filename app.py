@@ -239,77 +239,138 @@ if page == "📊 차트 분석 (Analysis)":
                     elif macro_change < -10: macro_trend = "(장기 추세: 청산 중 ↘️)"
                     else: macro_trend = "(장기 추세: 횡보 ➡️)"
 
-            # 2. Logic & Evidence Engine
-            phase_title = "분석 대기"
-            evidence_txt = "데이터 부족"
-            forecast_txt = "충분한 데이터가 없습니다."
-            color = "gray"
+            # 2. Logic & Evidence Engine (Multi-Timeframe Analysis)
+            # A. Define Timeframes
+            # (1) Range (Full Selection)
+            # (2) Latest 1 Week (Immediate Action)
+            # (3) Recent 1 Month (Short-term Trend)
             
-            # Thresholds (%)
-            SIGNIFICANT_CHANGE = 1.5 
+            # --- Metrics Calculation ---
+            # 1. Range (Start vs End)
+            range_oi_delta = ((range_df.iloc[-1]['Lev_Money_Positions_Short_All'] - range_df.iloc[0]['Lev_Money_Positions_Short_All']) / range_df.iloc[0]['Lev_Money_Positions_Short_All']) * 100
+            range_price_delta = ((range_df.iloc[-1]['Close'] - range_df.iloc[0]['Close']) / range_df.iloc[0]['Close']) * 100
+            range_corr = correlation
             
-            if oi_delta_pct > SIGNIFICANT_CHANGE: # OI UP (Phase 1: Spread Creation)
-                if price_delta_pct > SIGNIFICANT_CHANGE:
-                    phase_title = f"🌱 1단계: 파종 (Spread Creation) {macro_trend}"
-                    color = "green"
-                    forecast_txt = "**[강력 매수 구간]** 헤지펀드가 차익거래(Arbitrage)를 위해 현물을 공격적으로 사들이고 있습니다. 프리미엄 따먹기 자금이 유입되는 동안 상승 추세는 지속될 것입니다."
-                    evidence_txt = f"**{ticker_name}** 가격 상승(**+{price_delta_pct:.1f}%**)과 함께 숏 OI가 급증(**+{oi_delta_pct:.1f}%**)했습니다. 이는 하락 배팅이 아니라, 현물을 매수하고 선물을 파는 **'포지션 구축'** 활동입니다."
-                elif -SIGNIFICANT_CHANGE <= price_delta_pct <= SIGNIFICANT_CHANGE:
-                    phase_title = f"📦 매집/축적 (Accumulation) {macro_trend}"
-                    color = "blue"
-                    forecast_txt = "**[폭발 임박]** 가격은 묶어두고(횡보) 물량을 쓸어 담고 있습니다. 스프레드(가격차)가 벌어져 헤지펀드의 진입 유인이 극대화된 상태입니다."
-                    evidence_txt = f"가격은 **{price_delta_pct:.1f}%로 제자리**인데, 숏 OI만 **{oi_delta_pct:.1f}% 급증**했습니다. 조용히 현물을 매집하며 차익거래 포지션을 쌓고 있습니다."
-                else:
-                    phase_title = f"🛡️ 방어적 헷징 (Defensive Hedging) {macro_trend}"
-                    color = "orange"
-                    forecast_txt = "하락장에 대비해 보유 현물의 가치를 지키려는 방어적 숏입니다. 추가 하락 가능성이 있습니다."
-                    evidence_txt = f"가격이 하락(**{price_delta_pct:.1f}%**)하는데 숏 OI가 증가(**{oi_delta_pct:.1f}%**)합니다. 이것은 차익거래보다는 순수한 **'가격 하락 방어(Insurance)'** 목적의 진입으로 보입니다."
-                    
-            elif oi_delta_pct < -SIGNIFICANT_CHANGE: # OI DOWN (Phase 3: Unwinding)
-                if price_delta_pct < -SIGNIFICANT_CHANGE:
-                    phase_title = f"🚜 3단계: 수확 (Unwinding) {macro_trend}"
-                    color = "red"
-                    forecast_txt = "**[매도/관망 구간]** '이자 농사'가 끝나고 청산하는 단계입니다. 헤지펀드가 현물을 시장가로 던지면서(매도) 포지션을 정리하고 있습니다. 소나기는 피하세요."
-                    evidence_txt = f"**{ticker_name}** 가격 급락(**{price_delta_pct:.1f}%**)과 숏 OI 급감(**{oi_delta_pct:.1f}%**)이 동반됩니다. 차익거래 기회가 사라져 자금이 이탈(Exit)하는 전형적인 **청산 사이클**입니다."
-                elif price_delta_pct > SIGNIFICANT_CHANGE:
-                    phase_title = "💸 숏 스퀴즈 (Short Squeeze)"
-                    color = "orange"
-                    forecast_txt = "비정상적인 가격 상승입니다. 숏 포지션이 손실을 못 이기고 강제 청산당하며 가격을 밀어 올리는 중입니다. 추격 매수는 위험합니다."
-                    evidence_txt = f"가격은 오르는데(**+{price_delta_pct:.1f}%**) 숏 OI는 줄어들고(**{oi_delta_pct:.1f}%**) 있습니다. 자발적 수익 실현이 아니라, **'도망치는'** 상황입니다."
-                else:
-                    phase_title = "🍂 관심 저하 (Cooling Off)"
-                    color = "gray"
-                    forecast_txt = "시장의 관심이 식어가고 있습니다. 뚜렷한 주매수 주체가 없습니다."
-                    evidence_txt = "가격과 OI 모두 감소세입니다. 자금이 빠져나가며 시장의 활력이 떨어지고 있습니다."
-            else: # OI Stable (Phase 2: Carry)
-                phase_title = f"⏳ 2단계: 보유/이자 수익 (Carry) {macro_trend}"
-                color = "green" if price_delta_pct > -5 else "gray"
-                forecast_txt = "**[보유 구간]** 헤지펀드가 구축한 포지션을 유지하며 펀딩비(이자) 수익을 즐기고 있습니다. 대규모 이탈 신호가 없다면 추세는 유지됩니다."
-                evidence_txt = f"숏 OI 변화가 **{oi_delta_pct:.1f}%**로 안정적입니다. 거대 자본이 포지션을 굳건히 지키고(Holding) 있습니다."
+            # 2. Latest 1 Week (Last vs 2nd Last)
+            if len(range_df) >= 2:
+                latest_oi = range_df.iloc[-1]['Lev_Money_Positions_Short_All']
+                prev_oi = range_df.iloc[-2]['Lev_Money_Positions_Short_All']
+                latest_price = range_df.iloc[-1]['Close']
+                prev_price = range_df.iloc[-2]['Close']
+                
+                one_w_oi_delta = ((latest_oi - prev_oi) / prev_oi) * 100 if prev_oi != 0 else 0
+                one_w_price_delta = ((latest_price - prev_price) / prev_price) * 100 if prev_price != 0 else 0
+            else:
+                one_w_oi_delta = 0
+                one_w_price_delta = 0
+                
+            # 3. Recent 1 Month (Last vs 5th Last)
+            if len(range_df) >= 5:
+                prev_1m_oi = range_df.iloc[-5]['Lev_Money_Positions_Short_All']
+                one_m_oi_delta = ((range_df.iloc[-1]['Lev_Money_Positions_Short_All'] - prev_1m_oi) / prev_1m_oi) * 100 if prev_1m_oi != 0 else 0
+            else:
+                one_m_oi_delta = range_oi_delta # Fallback
+            
+            # --- Interpretation Logic ---
+            
+            # 1. Analyze Core Trend (Based on Correlation & Range)
+            trend_status = "중립/횡보"
+            trend_desc = "뚜렷한 방향성 없이 등락을 반복했습니다."
+            trend_color = "gray"
+            
+            if range_corr > 0.5:
+                if range_oi_delta > 5: 
+                    trend_status = "매집 우위 (Accumulation)"
+                    trend_desc = "기간 동안 가격과 숏 OI가 동반 상승했습니다. 헤지펀드의 지속적인 매집세가 관찰됩니다."
+                    trend_color = "green"
+                elif range_oi_delta < -5:
+                    trend_status = "청산 우위 (Distribution)"
+                    trend_desc = "기간 동안 가격과 숏 OI가 동반 하락했습니다. 차익거래 포지션을 정리하는 추세였습니다."
+                    trend_color = "red"
+            elif range_corr < -0.5:
+                if range_oi_delta < 0 and range_price_delta > 0:
+                    trend_status = "숏 스퀴즈 (Squeeze)"
+                    trend_desc = "가격은 올랐지만 숏 물량은 줄었습니다. 손절매성 청산이 상승을 주도했습니다."
+                    trend_color = "orange"
+                elif range_oi_delta > 0 and range_price_delta < 0:
+                    trend_status = "하락 배팅 (Bearish Bet)"
+                    trend_desc = "가격 하락에도 불구하고 숏 물량이 늘었습니다. 투기적 하락 배팅 추세입니다."
+                    trend_color = "red"
+            
+            # 2. Analyze Latest Action (Change of Heart?)
+            action_status = ""
+            action_desc = ""
+            
+            if one_w_oi_delta > 2.0:
+                action_status = "급격한 매집 📈"
+                action_desc = f"마지막 주에 숏 OI가 **{one_w_oi_delta:.1f}% 급증**했습니다. 다시 포지션을 구축하고 있습니다."
+            elif one_w_oi_delta < -2.0:
+                action_status = "긴급 이탈/청산 📉"
+                action_desc = f"마지막 주에 숏 OI가 **{one_w_oi_delta:.1f}% 급감**했습니다. 단기적인 자금 이탈이 발생했습니다."
+            else:
+                action_status = "관망/유지 ✊"
+                action_desc = f"마지막 주 변동폭이 미미합니다({one_w_oi_delta:.1f}%). 기존 포지션을 유지하고 있습니다."
 
-            # 3. Render UI
+            # 3. Final Synthesis (Verdict)
+            final_verdict = ""
+            final_color = "gray"
+            
+            # Logic: Conflict Check
+            if "매집" in trend_status and "이탈" in action_status:
+                final_verdict = "⚠️ 추세 이탈 경고 (Reversal Warning)"
+                final_synth = "전체적으로는 매집 구간이었으나, **가장 최근(1주) 헤지펀드가 갑자기 물량을 던지고 있습니다.** 상승 추세가 꺾일 위험이 있으니 주의가 필요합니다."
+                final_color = "orange"
+            elif "청산" in trend_status and "매집" in action_status:
+                final_verdict = "💎 저점 매수 신호 (Re-Entry)"
+                final_synth = "지루한 청산(하락) 추세였으나, **가장 최근(1주) 다시 자금이 유입되기 시작했습니다.** 추세 반전(상승)의 초입일 수 있습니다."
+                final_color = "blue"
+            elif "매집" in trend_status and "매집" in action_status:
+                final_verdict = "🔥 강력 상승 지속 (Strong Buy)"
+                final_synth = "장기적으로도 매집 중이고, **지금 당장도 더 강력하게 사고 있습니다.** 상승 모멘텀이 매우 강합니다."
+                final_color = "green"
+            elif "청산" in trend_status and "이탈" in action_status:
+                final_verdict = "🩸 패닉 셀링 (Strong Sell)"
+                final_synth = "물량이 계속 빠지고 있으며, **최근에는 더 빠른 속도로 도망치고 있습니다.** 절대 진입 금지 구간입니다."
+                final_color = "red"
+            else:
+                 final_verdict = f"{trend_status} + {action_status}"
+                 final_synth = f"전체적으로 {trend_status} 흐름을 보이고 있으며, 최근 행동 또한 {action_status} 상태로 일관적입니다. 큰 변곡점은 보이지 않습니다."
+                 final_color = trend_color
+
+            # --- UI RENDERING ---
             with st.container():
-                st.markdown(f"### 📢 분석 결과: :{color}[{phase_title}]")
+                st.markdown(f"### 📢 AI 종합 분석: :{final_color}[{final_verdict}]")
+                st.info(f"**💡 핵심 요약:** {final_synth}")
                 
-                c1, c2 = st.columns(2)
-                with c1:
-                    st.info(f"**📊 판단 근거 (Evidence):**\n\n{evidence_txt}")
+                # Tab Structure for Detail
+                tab1, tab2 = st.tabs(["📝 상세 분석 리포트", "🔢 기간별 수치 데이터"])
                 
-                with c2:
-                    if color == "red":
-                        st.error(f"**🔮 향후 전망 (Forecast):**\n\n{forecast_txt}")
-                    elif color == "green":
-                        st.success(f"**🔮 향후 전망 (Forecast):**\n\n{forecast_txt}")
-                    elif color == "blue":
-                        st.info(f"**🔮 향후 전망 (Forecast):**\n\n{forecast_txt}")
-                    else:
-                        st.warning(f"**🔮 향후 전망 (Forecast):**\n\n{forecast_txt}")
+                with tab1:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("#### 1. 전체 흐름 (Trend)")
+                        st.markdown(f"**상태:** :{trend_color}[{trend_status}]")
+                        st.caption(trend_desc)
+                        st.markdown(f"- **상관계수:** {range_corr:.2f}")
+                        st.markdown(f"- **총 OI 변동:** {range_oi_delta:+.1f}%")
+                        
+                    with col2:
+                        st.markdown("#### 2. 최근 행동 (Latest Action)")
+                        st.markdown(f"**상태:** **{action_status}**")
+                        st.caption(action_desc)
+                        st.markdown(f"- **1주 변동:** {one_w_oi_delta:+.1f}%")
+                        st.markdown(f"- **가격 변동:** {one_w_price_delta:+.1f}%")
 
+                with tab2:
+                    metric_cols = st.columns(3)
+                    metric_cols[0].metric("전체 기간 (Range)", f"{range_oi_delta:+.1f}%", f"Price {range_price_delta:+.1f}%")
+                    metric_cols[1].metric("최근 1달 (1M)", f"{one_m_oi_delta:+.1f}%", "Shorts Momentum")
+                    metric_cols[2].metric("최근 1주 (1W)", f"{one_w_oi_delta:+.1f}%", f"Price {one_w_price_delta:+.1f}%")
+                    
                 st.markdown(f"""
                 <small>
-                * 분석 기준: 선택 구간 ({pd.Timestamp(sel_start_date).strftime('%Y-%m-%d')} ~ {pd.Timestamp(sel_end_date).strftime('%Y-%m-%d')}, {weeks_duration}주) <br>
-                * 구간 수익률: Price **{price_delta_pct:.1f}%** / Short OI **{oi_delta_pct:.1f}%** <br>
-                * 상관계수(Correlation): {correlation:.2f} ({'동조화' if correlation > 0.5 else '역상관' if correlation < -0.5 else '비상관'})
+                * 분석 대상: {sel_start_date} ~ {sel_end_date} (총 {weeks_duration}주 데이터) <br>
+                * 과거의 데이터는 미래를 보장하지 않습니다. 참고용으로만 활용하세요.
                 </small>
                 """, unsafe_allow_html=True)
 
