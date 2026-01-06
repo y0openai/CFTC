@@ -604,7 +604,7 @@ if page == "📊 차트 분석 (Analysis)":
                                 
                                 [Task]
                                 You are a Head Strategist conducting a **Strategic Post-Mortem Analysis**.
-                                Analyze the data in 3 chronological phases and return a JSON object.
+                                Analyze the data and divide it into **Logical Strategic Phases** (No fixed limit, create as many as needed, typically 3-8 phases based on strategy shifts).
                                 
                                 [Narrative Formula (Crucial)]
                                 For each phase, the `narrative` MUST follow this structure explicitly:
@@ -618,19 +618,18 @@ if page == "📊 차트 분석 (Analysis)":
                                   "header": "Strategic Flow Summary (e.g., Accumulation ➡️ Directional Bet ➡️ Profit Taking)",
                                   "phases": [
                                     {{
-                                      "title": "Phase 1 Strategy Name (e.g., Cash-and-Carry, Momentum Short)",
+                                      "title": "Phase 1 Strategy Name",
                                       "period": "Start ~ End",
                                       "narrative": "**[Action]**: ...\n**[Intent]**: ...\n**[Result]**: ..."
                                     }},
-                                    {{ "title": "...", "period": "...", "narrative": "..." }},
-                                    {{ "title": "...", "period": "...", "narrative": "..." }}
+                                    ... (Add more phases as needed)
                                   ],
                                   "future_plan": "Next 1-Month Plan based on latest OI/Price structure.",
                                   "advice": "Key Market Variable to watch (Analytical Insight, NOT mockery)."
                                 }}
 
                                 [Constraints]
-                                - **Tone:** Professional, Analytical, Candid, Strategic. (No drama, No monologue).
+                                - **Tone:** Professional, Analytical, Candid, Strategic.
                                 - **LANGUAGE:** Korean (Clean & Professional).
                                 - **JSON ONLY**.
                                 """
@@ -640,7 +639,6 @@ if page == "📊 차트 분석 (Analysis)":
                                 # Parsing JSON
                                 import json
                                 try:
-                                    # Clean up if model adds markdown blocks
                                     text_res = response.text.replace("```json", "").replace("```", "").strip()
                                     data = json.loads(text_res)
                                     
@@ -648,17 +646,29 @@ if page == "📊 차트 분석 (Analysis)":
                                     st.markdown(f"### 🍷 헤지펀드 전략가의 회고록")
                                     st.subheader(data.get("header", "Strategy Flow"))
                                     
-                                    # 3-Column Layout for Horizontal Flow
-                                    cols = st.columns(3)
+                                    # Horizontal Scrollable Cards using HTML/CSS
                                     phases = data.get("phases", [])
                                     
-                                    for i, col in enumerate(cols):
-                                        if i < len(phases):
-                                            p = phases[i]
-                                            with col:
-                                                st.info(f"**{p['title']}**")
-                                                st.caption(f"🗓️ {p['period']}")
-                                                st.markdown(f"{p['narrative']}")
+                                    cards_html = ""
+                                    for p in phases:
+                                        # Convert newlines to breaks for HTML rendering
+                                        narrative_html = p['narrative'].replace('\n', '<br>')
+                                        
+                                        cards_html += f"""
+                                        <div style="min-width: 320px; max-width: 320px; background: rgba(128, 128, 128, 0.1); border: 1px solid rgba(128, 128, 128, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 5px; flex-shrink: 0;">
+                                            <div style="font-weight: bold; font-size: 1.15em; margin-bottom: 8px; color: #FFD700;">{p['title']}</div>
+                                            <div style="font-size: 0.85em; color: #ccc; margin-bottom: 15px; border-bottom: 1px solid #555; padding-bottom: 5px;">🗓️ {p['period']}</div>
+                                            <div style="font-size: 0.95em; line-height: 1.6; color: #eee;">{narrative_html}</div>
+                                        </div>
+                                        """
+                                    
+                                    # Scrolling Container
+                                    final_html = f"""
+                                    <div style="display: flex; flex-direction: row; overflow-x: auto; gap: 20px; padding: 10px 5px 20px 5px;">
+                                        {cards_html}
+                                    </div>
+                                    """
+                                    st.markdown(final_html, unsafe_allow_html=True)
                                     
                                     st.markdown("---")
                                     f_col1, f_col2 = st.columns(2)
