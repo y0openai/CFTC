@@ -657,20 +657,12 @@ if page == "📊 차트 분석 (Analysis)":
                                         safe_period = html.escape(str(p.get('period', '')))
                                         safe_narrative = html.escape(str(p.get('narrative', ''))).replace('\n', '<br>')
                                         
-                                        cards_html += f"""
-                                        <div style="min-width: 300px; max-width: 300px; background-color: #262730; border: 1px solid #454545; border-radius: 10px; padding: 15px; margin-right: 15px; flex-shrink: 0; color: white;">
-                                            <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 8px; color: #FFD700;">{safe_title}</div>
-                                            <div style="font-size: 0.8em; color: #aaa; margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 5px;">🗓️ {safe_period}</div>
-                                            <div style="font-size: 0.9em; line-height: 1.5; color: #e0e0e0;">{safe_narrative}</div>
-                                        </div>
-                                        """
+                                        # IMPORTANT: No indentation in f-string to avoid Markdown code block interpretation
+                                        cards_html += f"""<div style="min-width: 300px; max-width: 300px; background-color: #262730; border: 1px solid #454545; border-radius: 10px; padding: 15px; margin-right: 15px; flex-shrink: 0; color: white;"><div style="font-weight: bold; font-size: 1.1em; margin-bottom: 8px; color: #FFD700;">{safe_title}</div><div style="font-size: 0.8em; color: #aaa; margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 5px;">🗓️ {safe_period}</div><div style="font-size: 0.9em; line-height: 1.5; color: #e0e0e0;">{safe_narrative}</div></div>"""
                                     
                                     # Scrolling Container
-                                    final_html = f"""
-                                    <div style="display: flex; flex-direction: row; overflow-x: auto; padding-bottom: 15px;">
-                                        {cards_html}
-                                    </div>
-                                    """
+                                    final_html = f"""<div style="display: flex; flex-direction: row; overflow-x: auto; padding-bottom: 15px;">{cards_html}</div>"""
+                                    
                                     st.markdown(final_html, unsafe_allow_html=True)
                                     
                                     st.markdown("---")
