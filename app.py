@@ -722,7 +722,7 @@ if page == "📊 차트 분석 (Analysis)":
             
             b_col1, b_col2, b_col3 = st.columns(3)
             b_col1.metric("Overall Accuracy", "56%", "Better than Random")
-            b_col2.metric("Squeeze Signal (Sell)", "64%", "High Accuracy")
+            b_col2.metric("Squeeze Signal (Sell)", "57%", "Fake Pump Alert")
             b_col3.metric("Bear Raid (1W Rebound)", "67%", "Bull Trap Probability")
             
             st.info("💡 **전략적 통찰:** 'Bear Raid' 발생 시 **1주일 뒤에는 반등(67%)**하지만, **4주 뒤에는 하락세(55%)**로 전환되는 패턴이 발견되었습니다. 따라서 떨어진다고 바로 손절하기보다, **반등을 기다려 빠져나오는 전략**이 유효합니다.")
