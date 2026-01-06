@@ -8,10 +8,21 @@ import datetime
 import cftc_loader
 import google.generativeai as genai # AI Storytelling
 
-st.set_page_config(layout="wide", page_title="Crypto Price vs Hedge Fund Short OI")
+# -----------------------------------------------------------------------------
+# 1. Page Config
+# -----------------------------------------------------------------------------
+st.set_page_config(page_title="CFTC Hedge Fund Analysis", layout="wide")
+
+# -----------------------------------------------------------------------------
+# 2. Sidebar Controls & App Info
+# -----------------------------------------------------------------------------
+st.sidebar.title("CFTC 분석 대시보드")
+st.sidebar.caption("BTC Price vs Hedge Fund Short OI")
+
+st.sidebar.markdown("---")
+st.sidebar.header("Data Configuration")
 
 # --- SIDEBAR NAVIGATION ---
-st.sidebar.title("메뉴 (Menu)")
 page = st.sidebar.radio("이동하실 페이지를 선택하세요:", ["📊 차트 분석 (Analysis)", "🎓 초보자 가이드 (Guide)"])
 st.sidebar.markdown("---")
 
