@@ -1,6 +1,6 @@
-streamlit
-pandas
-yfinance
-plotly
+streamlit>=1.20.0
+pandas>=1.5.0
+yfinance>=0.2.0
+plotly>=5.13.0
 requests
 matplotlib
