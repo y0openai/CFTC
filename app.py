@@ -504,7 +504,16 @@ if page == "📊 차트 분석 (Analysis)":
             # Main Forecast Logic
             final_forecast_text = "충분한 데이터가 없습니다."
             
-            if "매집" in trend_status and one_w_oi_delta < -5:
+            # --- CRITICAL FIX: Emergency Override for Bear Raid ---
+            # If latest week shows Bear Raid (Price Drop < -3% & OI Jump > 5%), override long-term trend.
+            is_bear_raid = (one_w_price_delta < -3.0) and (one_w_oi_delta > 5.0)
+
+            if is_bear_raid:
+                final_verdict = "⚠️ 공매도 공격 경고 (Bear Raid Alert)"
+                final_color = "red"
+                final_forecast_text = "🚨 **긴급 경고:** 최근 1주간 세력의 **'약탈적 공매도(Predatory Shorting)'**가 포착되었습니다. 장기 추세가 좋더라도 현재는 세력이 인위적으로 하락을 유도하고 있습니다. 바닥이 확인될 때까지 절대 진입하지 마십시오."
+
+            elif "매집" in trend_status and one_w_oi_delta < -5:
                 final_verdict = "⚠️ 추세 이탈 경고 (Trend Reversal)"
                 final_color = "orange"
                 final_forecast_text = "장기간의 매집 추세가 깨지고 대규모 이탈이 발생했습니다. 상승 관점을 철회하고 리스크 관리에 들어가야 할 때입니다."
