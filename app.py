@@ -587,15 +587,21 @@ if page == "📊 차트 분석 (Analysis)":
                                 
                                 prompt_rows = []
                                 for idx, row in sample_df.iterrows():
-                                    prompt_rows.append(f"- {row['Date'].strftime('%Y-%m-%d')}: BTC Price ${row['Close']:,.0f}, Short Contracts {row['Lev_Money_Positions_Short_All']:,.0f}")
+                                    prompt_rows.append(f"- {row['Date'].strftime('%Y-%m-%d')}: BTC Price ${row['Close']:,.0f}, **MY Short Position**: {row['Lev_Money_Positions_Short_All']:,.0f} contracts")
                                 
                                 prompt_text = f"""
                                 [Role]
                                 You are a ruthless Head Strategist at a top Hedge Fund targeting the Korean market.
                                 You speak perfect, natural Korean (Hangul). Do NOT use Japanese or Chinese characters.
                                 
-                                [Input Data: Price vs Short OI]
+                                [Input Data: Price vs **MY Short Contracts**]
                                 {chr(10).join(prompt_rows)}
+                                
+                                [CRITICAL RULE]
+                                - **Short OI (Contracts)** is **YOUR OWN POSITION**. 
+                                - When OI goes UP: **YOU** are selling more shorts (Betting on Drop or Hedging).
+                                - When OI goes DOWN: **YOU** are buying back (Closing shorts/Taking Profit).
+                                - **NEVER** interpret OI as "retail traders' hope". Retail traders are mostly Long. YOU are the Short Whale.
                                 
                                 [Task]
                                 Create a "Secret Trading Journal" with a strong narrative flow (Left to Right).
@@ -608,9 +614,9 @@ if page == "📊 차트 분석 (Analysis)":
                                    - Divide volume into 3 Phases.
                                    - For each phase, explain your manipulative tactic.
                                    - **Logic:**
-                                     * OI ↑ + Price ↑ = "개미 꼬시기 (Farming)"
-                                     * OI ↑ + Price ↓ = "공포 조장 (Bear Raid)"
-                                     * OI ↓ = "이익 실현 (Exit)"
+                                     * MY Position ↑ + Price ↑ = "개미 꼬시기 (Farming)" -> "I increased my shorts while price rose to collect premium."
+                                     * MY Position ↑ + Price ↓ = "공포 조장 (Bear Raid)" -> "I dumped spot and increased shorts to crush the price."
+                                     * MY Position ↓ = "이익 실현 (Exit)" -> "I closed my shorts (bought back) to take profit."
                                 
                                 3. **Future Plan (The Next Move):**
                                    - Based on the LAST data point, write a "Next 1-Month Secret Plan".
