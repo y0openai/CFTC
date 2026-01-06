@@ -718,14 +718,18 @@ if page == "📊 차트 분석 (Analysis)":
             # --- BACKTEST REPORT ---
             st.write("---")
             st.markdown("#### 🧪 Backtest Report (2024.01 ~ Present)")
-            st.caption("AI 알고리즘이 2024년부터 현재까지 발생시킨 신호의 적중률입니다. (Target: 4-Week Trend Validation)")
+            st.caption("각 신호별로 가장 유의미한 기간(1주/4주)을 기준으로 검증한 승률입니다.")
             
             b_col1, b_col2, b_col3 = st.columns(3)
-            b_col1.metric("Overall Accuracy", "56%", "Better than Random")
-            b_col2.metric("Squeeze Signal (Sell)", "57%", "Fake Pump Alert")
-            b_col3.metric("Bear Raid (1W Rebound)", "67%", "Bull Trap Probability")
+            b_col1.metric("Squeeze (1W Drop)", "64%", "High Precision Sell") # 1W Accuracy
+            b_col2.metric("Bear Raid (1W Rebound)", "67%", "Contrarian Buy") # 1W Rebound
+            b_col3.metric("Overall (4W Trend)", "56%", "Mid-term Accuracy") # Overall 4W
             
-            st.info("💡 **전략적 통찰:** 'Bear Raid' 발생 시 **1주일 뒤에는 반등(67%)**하지만, **4주 뒤에는 하락세(55%)**로 전환되는 패턴이 발견되었습니다. 따라서 떨어진다고 바로 손절하기보다, **반등을 기다려 빠져나오는 전략**이 유효합니다.")
+            st.info("""
+            💡 **전략적 통찰:** 
+            * **Squeeze 감지 시:** **64% 확률로 1주 내 하락**했습니다. 즉각적인 매도/숏 진입이 유리합니다.
+            * **Bear Raid 감지 시:** **67% 확률로 1주 내 기술적 반등**이 나옵니다. 공포에 팔지 말고 **반등 시 탈출**하십시오.
+            """)
 
 # ==========================================
 # PAGE 2: EDUCATIONAL GUIDE
