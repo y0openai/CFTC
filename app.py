@@ -202,8 +202,6 @@ if page == "📊 차트 분석 (Analysis)":
             st.plotly_chart(fig, use_container_width=True)
             
             # --- SMART MONEY ANALYSIS ENGINE (DYNAMIC RANGE) ---
-            st.subheader(f"🤖 Smart Money Analysis & Forecast ({sel_start_date} ~ {sel_end_date})")
-            
             # 1. Calculation Engine
             # Filter data within range
             range_df = combined[(combined['Date'].dt.date >= sel_start_date) & 
