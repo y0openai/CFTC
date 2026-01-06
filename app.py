@@ -605,7 +605,10 @@ if page == "📊 차트 분석 (Analysis)":
                                    - **OI UP + Price DOWN:** "Bear Raid" (Predatory shorting).
                                    - **OI DOWN:** "Exit/Squeeze" (Taking profit or fleeing).
                                 3. Use professional yet provocative language (e.g., "Yield Farming", "Alpha", "Liquidity", "Panic Sell").
-                                4. End with a [CEO Summary] giving a brutally honest advice to retail traders.
+                                4. **[Create Future Strategy]**: Based on the *Last Week's Action* (the final data point), formulate a **"Next 1-Month Operation Plan"**.
+                                   - Imagine you are writing a confidential memo to your internal trading desk.
+                                   - Be specific: "We will increase shorts by 20% if price hits $X", "We will unwind positions if..."
+                                5. End with a [CEO Summary] giving a brutally honest advice to retail traders.
                                 
                                 [Format]
                                 - Valid Markdown.
