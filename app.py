@@ -6,6 +6,7 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 import datetime
 import cftc_loader
+import google.generativeai as genai # AI Storytelling
 
 st.set_page_config(layout="wide", page_title="Crypto Price vs Hedge Fund Short OI")
 
@@ -55,6 +56,10 @@ if page == "📊 차트 분석 (Analysis)":
     SHOW_DOLLAR_VALUE = st.sidebar.checkbox(f"금액($)으로 환산하여 보기 (Contract * Price * {asset_conf['multiplier']})", value=False)
     # Insight Option
     HIGHLIGHT_CHANGE = st.sidebar.checkbox("급격한 변동 구간 강조 (Significant Changes)", value=True, help="전주 대비 10% 이상 변화한 구간을 색상으로 구분합니다.")
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🔑 AI 실험실 (Lab)")
+    gemini_api_key = st.sidebar.text_input("Gemini API Key", type="password", help="[헤지펀드의 고백] 기능을 사용하려면 API 키가 필요합니다.")
 
     @st.cache_data(ttl=3600*24)
     def load_data(start_y, end_y, conf):
@@ -563,6 +568,58 @@ if page == "📊 차트 분석 (Analysis)":
                     st.warning(f"**🔮 향후 전망 (Forecast):** {final_forecast_text}")
                 else:
                     st.info(f"**🔮 향후 전망 (Forecast):** {final_forecast_text}")
+
+                # --- GEN_AI FEATURE: Hedge Fund Confession ---
+                if st.button("🕵️‍♂️ [헤지펀드의 비밀 고백] 듣기 (AI Narrative)"):
+                    if not gemini_api_key:
+                        st.warning("🔐 사이드바 'AI 실험실'에 **Gemini API Key**를 입력해야 들을 수 있습니다.")
+                    else:
+                        with st.spinner("🕶️ 헤지펀드 수석 전략가가 비밀 장부를 확인하고 있습니다..."):
+                            try:
+                                genai.configure(api_key=gemini_api_key)
+                                model = genai.GenerativeModel('gemini-1.5-flash')
+                                
+                                # Prepare Prompt Data
+                                sample_df = range_df.copy()
+                                # Smart Sampling: Ensure we don't send too much data, but keep trend
+                                if len(sample_df) > 30: 
+                                     sample_df = sample_df.iloc[::len(sample_df)//30]
+                                
+                                prompt_rows = []
+                                for idx, row in sample_df.iterrows():
+                                    prompt_rows.append(f"- {row['Date'].strftime('%Y-%m-%d')}: BTC Price ${row['Close']:,.0f}, Short Contracts {row['Lev_Money_Positions_Short_All']:,.0f}")
+                                
+                                prompt_text = f"""
+                                [Role]
+                                You are a ruthless, cynical, yet brilliant Head Strategist at a top Wall Street Hedge Fund. 
+                                You view retail investors ("ants") as necessary liquidity providers.
+                                
+                                [Data: My Trading Log (Price vs Short Position)]
+                                {chr(10).join(prompt_rows)}
+                                
+                                [Task]
+                                Write a "Confession Report" analyzing the given period.
+                                1. Divide the period into 3-4 phases based on your strategy (e.g., "The Trap", "The Harvest", "The Squeeze").
+                                2. For each phase, explain your intent.
+                                   - **OI UP + Price UP:** "Arbitrage Farming Mode" (Collecting premium).
+                                   - **OI UP + Price DOWN:** "Bear Raid" (Predatory shorting).
+                                   - **OI DOWN:** "Exit/Squeeze" (Taking profit or fleeing).
+                                3. Use professional yet provocative language (e.g., "Yield Farming", "Alpha", "Liquidity", "Panic Sell").
+                                4. End with a [CEO Summary] giving a brutally honest advice to retail traders.
+                                
+                                [Format]
+                                - Valid Markdown.
+                                - Language: **Korean** (Natural, dramatic storytelling).
+                                """
+                                
+                                response = model.generate_content(prompt_text)
+                                st.markdown("---")
+                                st.markdown("### 🍷 헤지펀드 전략가의 회고록 (The Secret Journal)")
+                                st.markdown(response.text)
+                                st.success("이것이 월스트리트의 방식입니다.")
+                                
+                            except Exception as e:
+                                st.error(f"보안 프로토콜 오류: {e}")
                 
                  # Detailed Behavior Analysis Log
                 st.markdown("#### 🕵️ 행동 분석 (Weekly Behavior Timeline)")

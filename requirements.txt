@@ -4,3 +4,4 @@ yfinance>=0.2.0
 plotly>=5.13.0
 requests
 matplotlib
+google-generativeai
