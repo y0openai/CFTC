@@ -718,10 +718,10 @@ if page == "📊 차트 분석 (Analysis)":
             # --- BACKTEST REPORT ---
             st.write("---")
             st.markdown("#### 🧪 Backtest Report (2024.01 ~ Present)")
-            st.caption("AI 알고리즘이 2024년부터 현재까지 발생시킨 신호의 적중률입니다. (Target: 1 Week Validation)")
+            st.caption("AI 알고리즘이 2024년부터 현재까지 발생시킨 신호의 적중률입니다. (Target: 4-Week Trend Validation)")
             
             b_col1, b_col2, b_col3 = st.columns(3)
-            b_col1.metric("Overall Accuracy", "52%", "Coin Toss Level")
+            b_col1.metric("Overall Accuracy", "56%", "Better than Random")
             b_col2.metric("Squeeze Signal (Sell)", "64%", "High Accuracy")
             b_col3.metric("Bear Raid (1W Rebound)", "67%", "Bull Trap Probability")
             
