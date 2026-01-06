@@ -38,7 +38,7 @@ def ensure_cache_dir():
     if not os.path.exists(CACHE_DIR):
         os.makedirs(CACHE_DIR)
 
-def download_and_read_year(year):
+def download_and_read_year(year, asset_name="BITCOIN"):
     """Downloads zip for a year, extracts txt, and returns DataFrame."""
     ensure_cache_dir()
     
@@ -46,17 +46,16 @@ def download_and_read_year(year):
     cache_file = os.path.join(CACHE_DIR, f"fin_fut_txt_{year}.txt")
     
     # For current year, always re-download or check freshness
-    # For past years, cache is fine.
     current_year = datetime.datetime.now().year
     
     df = None
     
     if os.path.exists(cache_file) and year < current_year:
-        print(f"Loading cached data for {year}")
+        # print(f"Loading cached data for {year}")
         try:
              df = pd.read_csv(cache_file, low_memory=False)
         except Exception as e:
-            print(f"Error reading cache for {year}, re-downloading... {e}")
+            print(f"Error reading cache for {year}: {e}")
 
     if df is None:
         print(f"Downloading data for {year}...")
@@ -89,8 +88,8 @@ def download_and_read_year(year):
     # DEBUG: Print columns to find the correct Date column name
     # print(f"Columns found for {year}: {df.columns.tolist()}")
 
-    # Filter for Bitcoin
-    # Search for "BITCOIN" in Market names
+    # Filter for Asset Name (BITCOIN or ETHER)
+    # Search for asset_name in Market names
     # Column might be 'Market_and_Exchange_Names' or 'Market_and_Exchange_Names ' etc.
     # Let's find the market column dynamically
     market_col = [c for c in df.columns if 'Market' in c and 'Exchange' in c]
@@ -99,8 +98,15 @@ def download_and_read_year(year):
         return pd.DataFrame()
     market_col = market_col[0]
 
-    btc_df = df[df[market_col].str.contains("BITCOIN", na=False)].copy()
+    # Use exact string match or containment? Containment is safer.
+    # "BITCOIN - CHICAGO MERCANTILE EXCHANGE"
+    # "ETHER - CHICAGO MERCANTILE EXCHANGE"
+    btc_df = df[df[market_col].str.contains(asset_name, na=False)].copy()
     
+    if btc_df.empty:
+        # Try harder if asset name might be different (e.g. ETH vs ETHER)
+        pass
+
     # Find Date column dynamically
     date_col = [c for c in df.columns if 'Report_Date' in c]
     if not date_col:
@@ -108,19 +114,15 @@ def download_and_read_year(year):
         return pd.DataFrame()
     date_col = date_col[0]
     
-    # Other columns mapping
-    # We need to map our expected generic names to actual names if they differ
-    # For now, let's just rename the critical ones if found
-    
     # Parse Date
     btc_df['Date'] = pd.to_datetime(btc_df[date_col])
     
     return btc_df
 
-def get_cftc_data(start_year, end_year):
+def get_cftc_data(start_year, end_year, asset_name="BITCOIN"):
     all_dfs = []
     for y in range(start_year, end_year + 1):
-        df = download_and_read_year(y)
+        df = download_and_read_year(y, asset_name)
         if not df.empty:
             all_dfs.append(df)
             
