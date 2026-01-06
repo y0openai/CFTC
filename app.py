@@ -612,6 +612,9 @@ if page == "📊 차트 분석 (Analysis)":
                                 
                                 [Format]
                                 - Valid Markdown.
+                                - **Start with a Horizontal Summary:** Use arrows (➡️) to show the strategy flow (e.g., `🌿 Phase 1: Farming ➡️ ⚡ Phase 2: Bear Raid ➡️ 💰 Phase 3: Exit`).
+                                - Use > Blockquotes for key insights ("Inner Voice").
+                                - Use concise, visual bullet points.
                                 - Language: **Korean** (Natural, dramatic storytelling).
                                 """
                                 
