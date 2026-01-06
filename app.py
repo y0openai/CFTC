@@ -613,70 +613,96 @@ if page == "📊 차트 분석 (Analysis)":
                                 3. **Market Reaction**: "The market absorbed my selling / collapsed under pressure / ignored my signals..."
                                 4. **Outcome**: "Consequently, I locked in risk-free alpha / realized a directional profit / suffered a stop-loss."
 
-                                [Output JSON Structure]
-                                {{
-                                  "header": "Strategic Flow Summary (e.g., Accumulation ➡️ Directional Bet ➡️ Profit Taking)",
-                                  "phases": [
-                                    {{
-                                      "title": "Phase 1 Strategy Name",
-                                      "period": "Start ~ End",
-                                      "narrative": "**[Action]**: ...\n**[Intent]**: ...\n**[Result]**: ..."
-                                    }},
-                                    ... (Add more phases as needed)
-                                  ],
-                                  "future_plan": "Next 1-Month Plan based on latest OI/Price structure.",
-                                  "advice": "Key Market Variable to watch (Analytical Insight, NOT mockery)."
-                                }}
+                                [Output Format - Custom Tagging]
+                                Use strict tags for parsing. Do NOT use JSON.
+                                
+                                <HEADER>Strategic Flow Summary (e.g., Accumulation ➡️ Directional Bet ➡️ Profit Taking)</HEADER>
+                                
+                                <PHASE>
+                                TITLE: Phase 1 Strategy Name
+                                PERIOD: Start ~ End
+                                CONTENT: **[Action]**: ...
+                                **[Intent]**: ...
+                                **[Result]**: ...
+                                </PHASE>
+                                
+                                <PHASE>
+                                TITLE: Phase 2...
+                                ...
+                                </PHASE>
+
+                                <FUTURE>Next 1-Month Plan...</FUTURE>
+                                <ADVICE>Key Market Variable...</ADVICE>
 
                                 [Constraints]
                                 - **Tone:** Professional, Analytical, Candid, Strategic.
-                                - **LANGUAGE:** Korean (Clean & Professional).
-                                - **JSON ONLY**.
+                                - **LANGUAGE:** Korean.
+                                - **Follow the Tags EXACTLY.**
                                 """
                                 
                                 response = model.generate_content(prompt_text)
+                                text_res = response.text
                                 
-                                # Parsing JSON
-                                import json
+                                # Robust Parsing using Regex
+                                import re
+                                import html
+                                
                                 try:
-                                    text_res = response.text.replace("```json", "").replace("```", "").strip()
-                                    data = json.loads(text_res)
+                                    # Extract Header
+                                    header_match = re.search(r"<HEADER>(.*?)</HEADER>", text_res, re.DOTALL)
+                                    header_txt = header_match.group(1).strip() if header_match else "Strategy Flow"
                                     
+                                    # Extract Phases
+                                    phases = []
+                                    phase_matches = re.findall(r"<PHASE>(.*?)</PHASE>", text_res, re.DOTALL)
+                                    
+                                    for p_txt in phase_matches:
+                                        title_match = re.search(r"TITLE:\s*(.*)", p_txt)
+                                        period_match = re.search(r"PERIOD:\s*(.*)", p_txt)
+                                        # Content is everything after CONTENT:
+                                        content_match = re.search(r"CONTENT:\s*(.*)", p_txt, re.DOTALL)
+                                        
+                                        phases.append({
+                                            "title": title_match.group(1).strip() if title_match else "Phase",
+                                            "period": period_match.group(1).strip() if period_match else "",
+                                            "narrative": content_match.group(1).strip() if content_match else p_txt.strip()
+                                        })
+                                    
+                                    # Extract Footer
+                                    future_match = re.search(r"<FUTURE>(.*?)</FUTURE>", text_res, re.DOTALL)
+                                    future_txt = future_match.group(1).strip() if future_match else "No Plan"
+                                    
+                                    advice_match = re.search(r"<ADVICE>(.*?)</ADVICE>", text_res, re.DOTALL)
+                                    advice_txt = advice_match.group(1).strip() if advice_match else "No Advice"
+
+                                    # --- Render UI ---
                                     st.markdown("---")
                                     st.markdown(f"### 🍷 헤지펀드 전략가의 회고록")
-                                    st.subheader(data.get("header", "Strategy Flow"))
-                                    
-                                    # Horizontal Scrollable Cards using HTML/CSS
-                                    import html
-                                    phases = data.get("phases", [])
+                                    st.subheader(header_txt)
                                     
                                     cards_html = ""
                                     for p in phases:
-                                        # Safe HTML Escaping
-                                        safe_title = html.escape(str(p.get('title', '')))
-                                        safe_period = html.escape(str(p.get('period', '')))
-                                        safe_narrative = html.escape(str(p.get('narrative', ''))).replace('\n', '<br>')
+                                        safe_title = html.escape(p['title'])
+                                        safe_period = html.escape(p['period'])
+                                        safe_narrative = html.escape(p['narrative']).replace('\n', '<br>')
                                         
                                         # IMPORTANT: No indentation in f-string to avoid Markdown code block interpretation
                                         cards_html += f"""<div style="min-width: 300px; max-width: 300px; background-color: #262730; border: 1px solid #454545; border-radius: 10px; padding: 15px; margin-right: 15px; flex-shrink: 0; color: white;"><div style="font-weight: bold; font-size: 1.1em; margin-bottom: 8px; color: #FFD700;">{safe_title}</div><div style="font-size: 0.8em; color: #aaa; margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 5px;">🗓️ {safe_period}</div><div style="font-size: 0.9em; line-height: 1.5; color: #e0e0e0;">{safe_narrative}</div></div>"""
                                     
-                                    # Scrolling Container
                                     final_html = f"""<div style="display: flex; flex-direction: row; overflow-x: auto; padding-bottom: 15px;">{cards_html}</div>"""
-                                    
                                     st.markdown(final_html, unsafe_allow_html=True)
                                     
                                     st.markdown("---")
                                     f_col1, f_col2 = st.columns(2)
                                     with f_col1:
                                         st.markdown("#### 🚀 향후 1개월 비밀 작전")
-                                        st.success(data.get("future_plan", "No Plan."))
+                                        st.success(future_txt)
                                     with f_col2:
-                                        st.markdown("#### 💀 개미들에게 고함")
-                                        st.warning(data.get("advice", "No Advice."))
-                                        
-                                except Exception as json_e:
-                                    # Fallback if JSON fails
-                                    st.warning("⚠️ 데이터 파싱 중 오류가 발생하여 원본 텍스트를 출력합니다.")
+                                        st.markdown("#### 💀 핵심 변수 (Key Insight)")
+                                        st.warning(advice_txt)
+
+                                except Exception as e:
+                                    st.warning(f"⚠️ 리포트 생성 중 포맷 오류: {e}")
                                     st.markdown(response.text)
                                 st.success("이것이 월스트리트의 방식입니다.")
                                 
