@@ -53,8 +53,8 @@ if page == "📊 차트 분석 (Analysis)":
 
     # Option to calculate $ value
     SHOW_DOLLAR_VALUE = st.sidebar.checkbox(f"금액($)으로 환산하여 보기 (Contract * Price * {asset_conf['multiplier']})", value=False)
-    # Smoothing Option
-    USE_MA = st.sidebar.checkbox("이동평균선(MA) 적용 (4주) - 추세 보기", value=True)
+    # Insight Option
+    HIGHLIGHT_CHANGE = st.sidebar.checkbox("급격한 변동 구간 강조 (Significant Changes)", value=True, help="전주 대비 10% 이상 변화한 구간을 색상으로 구분합니다.")
 
     @st.cache_data(ttl=3600*24)
     def load_data(start_y, end_y, conf):
@@ -104,10 +104,22 @@ if page == "📊 차트 분석 (Analysis)":
                 y_am = asset_mgr_shorts_raw
                 y_axis_title = "Short Interest (Contract Count)"
 
-            # 3. Apply Smoothing (Moving Average) if requested
-            if USE_MA:
-                y_hf = y_hf.rolling(window=4).mean() # 4 Weeks MA
-                y_am = y_am.rolling(window=4).mean()
+            # 3. Highlight Logic (Insight Tool)
+            # Calculate % Change to determine colors
+            bar_colors = ['blue'] * len(y_hf) # Default
+            if HIGHLIGHT_CHANGE:
+                pct_change = y_hf.pct_change() * 100
+                new_colors = []
+                for chg in pct_change:
+                    if pd.isna(chg):
+                         new_colors.append('blue')
+                    elif chg > 10.0:
+                        new_colors.append('red') # Sharp Increase (Bearish Signal)
+                    elif chg < -10.0:
+                        new_colors.append('green') # Sharp Decrease (Bullish Signal)
+                    else:
+                        new_colors.append('blue')
+                bar_colors = new_colors
             
             # Plotting
             x_btc = btc_data.index
@@ -124,10 +136,10 @@ if page == "📊 차트 분석 (Analysis)":
                 secondary_y=False,
             )
 
-            # 2. Hedge Fund Shorts (Right - Blue)
-            name_hf = "Hedge Funds Short (4W MA)" if USE_MA else "Hedge Funds Short"
+            # 2. Hedge Fund Shorts (Right - Bar)
+            name_hf = "Hedge Funds Short"
             fig.add_trace(
-                go.Bar(x=x_cftc, y=y_hf, name=name_hf, marker=dict(color='blue', opacity=0.4)),
+                go.Bar(x=x_cftc, y=y_hf, name=name_hf, marker=dict(color=bar_colors, opacity=0.6)),
                 secondary_y=True,
             )
             
