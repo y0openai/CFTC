@@ -603,28 +603,36 @@ if page == "📊 차트 분석 (Analysis)":
                                 - OI DOWN: You are taking PROFIT.
                                 
                                 [Task]
+                                You are a Head Strategist conducting a **Strategic Post-Mortem Analysis**.
                                 Analyze the data in 3 chronological phases and return a JSON object.
                                 
+                                [Narrative Formula (Crucial)]
+                                For each phase, the `narrative` MUST follow this structure explicitly:
+                                1. **My Action**: "I increased/decreased Short positions by X%..."
+                                2. **Intent**: "Because I targeted the basis spread / identified a bubble / feared a squeeze..."
+                                3. **Market Reaction**: "The market absorbed my selling / collapsed under pressure / ignored my signals..."
+                                4. **Outcome**: "Consequently, I locked in risk-free alpha / realized a directional profit / suffered a stop-loss."
+
                                 [Output JSON Structure]
                                 {{
-                                  "header": "One-line summary with arrows (e.g., Phase1 ➡️ Phase2 ➡️ Phase3)",
+                                  "header": "Strategic Flow Summary (e.g., Accumulation ➡️ Directional Bet ➡️ Profit Taking)",
                                   "phases": [
                                     {{
-                                      "title": "Phase 1 Title (e.g., 🌿 The Trap)",
-                                      "period": "Start Date ~ End Date",
-                                      "narrative": "Storytelling about your manipulation. Why you did it. How you tricked ants."
+                                      "title": "Phase 1 Strategy Name (e.g., Cash-and-Carry, Momentum Short)",
+                                      "period": "Start ~ End",
+                                      "narrative": "**[Action]**: ...\n**[Intent]**: ...\n**[Result]**: ..."
                                     }},
-                                    {{ "title": "Phase 2 Title", "period": "...", "narrative": "..." }},
-                                    {{ "title": "Phase 3 Title", "period": "...", "narrative": "..." }}
+                                    {{ "title": "...", "period": "...", "narrative": "..." }},
+                                    {{ "title": "...", "period": "...", "narrative": "..." }}
                                   ],
-                                  "future_plan": "Next 1-Month Operation Plan (Scenario)",
-                                  "advice": "Cynical advice to retail investors (CEO's Closing Remark)"
+                                  "future_plan": "Next 1-Month Plan based on latest OI/Price structure.",
+                                  "advice": "Key Market Variable to watch (Analytical Insight, NOT mockery)."
                                 }}
 
                                 [Constraints]
-                                - **Return ONLY valid JSON.** No markdown formatting (```json) outside the object.
-                                - **LANGUAGE:** Korean (Hangul).
-                                - **Tone:** Cynical, Elite, 'The Big Short' style.
+                                - **Tone:** Professional, Analytical, Candid, Strategic. (No drama, No monologue).
+                                - **LANGUAGE:** Korean (Clean & Professional).
+                                - **JSON ONLY**.
                                 """
                                 
                                 response = model.generate_content(prompt_text)
