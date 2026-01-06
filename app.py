@@ -509,9 +509,9 @@ if page == "📊 차트 분석 (Analysis)":
             is_bear_raid = (one_w_price_delta < -3.0) and (one_w_oi_delta > 5.0)
 
             if is_bear_raid:
-                final_verdict = "🩸 공매도 공격 (Short Term Bottom?)"
-                final_color = "orange" # Warning but potentially Opportunity
-                final_forecast_text = "🚨 **역발상 기회 감지:** 세력의 '약탈적 공매도'로 가격이 급락했습니다. 하지만 과거 시뮬레이션 결과, **이 패턴 발생 후 67% 확률로 기술적 반등**이 나타났습니다. 공포에 매도하기보다 과매도 구간에서의 **분할 매수**를 고려해보세요."
+                final_verdict = "🩸 공매도 공격 (Dead Cat Bounce Warning)"
+                final_color = "red" 
+                final_forecast_text = "🚨 **함정 경고(Bull Trap):** 세력의 공매도 공격이 감지되었습니다. 통계적으로 **1주 내 기술적 반등(67%)**이 발생할 수 있으나, **4주 후에는 하락할 확률(55%)**이 더 높습니다. 단기 반등을 이용하여 **물량을 정리(Exit)**하는 것이 현명합니다."
 
             elif "매집" in trend_status and one_w_oi_delta < -5:
                 final_verdict = "⚠️ 추세 이탈 경고 (Trend Reversal)"
@@ -723,9 +723,9 @@ if page == "📊 차트 분석 (Analysis)":
             b_col1, b_col2, b_col3 = st.columns(3)
             b_col1.metric("Overall Accuracy", "52%", "Coin Toss Level")
             b_col2.metric("Squeeze Signal (Sell)", "64%", "High Accuracy")
-            b_col3.metric("Bear Raid Rebound (Buy)", "67%", "Contrarian Opportunity")
+            b_col3.metric("Bear Raid (1W Rebound)", "67%", "Bull Trap Probability")
             
-            st.info("💡 **전략적 통찰:** 'Bear Raid' 경고는 강력한 하락 신호처럼 보이지만, 실제로는 **단기 과매도 구간(Bottom)**인 경우가 67%였습니다. 이를 '공포 매수'의 기회로 활용하십시오.")
+            st.info("💡 **전략적 통찰:** 'Bear Raid' 발생 시 **1주일 뒤에는 반등(67%)**하지만, **4주 뒤에는 하락세(55%)**로 전환되는 패턴이 발견되었습니다. 따라서 떨어진다고 바로 손절하기보다, **반등을 기다려 빠져나오는 전략**이 유효합니다.")
 
 # ==========================================
 # PAGE 2: EDUCATIONAL GUIDE
