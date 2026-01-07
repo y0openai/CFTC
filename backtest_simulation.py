@@ -1,19 +1,12 @@
-
 import pandas as pd
-import cftc_loader
-import yfinance as yf
+from src.data_loader import DataLoader
 import datetime
 
 # 1. Data Loading (2023 for context, 2024-2026 for Test)
 try:
-    cftc = cftc_loader.get_cftc_data(2023, 2026, asset_name="BITCOIN")
-    cftc = cftc.sort_values('Date').drop_duplicates(subset=['Date'], keep='last')
-
-    ticker = yf.Ticker("BTC-USD")
-    price = ticker.history(start="2023-01-01", end=datetime.datetime.now().strftime('%Y-%m-%d'))
-    price.index = pd.to_datetime(price.index).tz_localize(None)
-
-    combined = pd.merge_asof(cftc, price['Close'], left_on='Date', right_index=True, direction='nearest')
+    # Use Refactored Codebase
+    asset_conf = {"ticker": "BTC-USD", "cftc_name": "BITCOIN", "multiplier": 5}
+    combined = DataLoader.load_all_data(2023, 2026, asset_conf)
 
     if combined.empty:
         print("Data load failed. Combined DF is empty.")
